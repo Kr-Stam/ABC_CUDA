@@ -1,0 +1,3 @@
+Prvo treba da go implementiram algoritamot:
+- aboti vo ciklusi
+-ima povekje pcheli, od koi nekoi se :
