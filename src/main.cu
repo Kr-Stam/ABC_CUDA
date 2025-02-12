@@ -28,13 +28,13 @@ void generate_linspace(std::vector<double> v, double start, double end, int n)
 
 int main()
 {
-	double upper_bound[] = {5.12, 5.12};
-	double lower_bound[] = {-5.12, -5.12};
+	double upper_bound[] = {10, 10};
+	double lower_bound[] = {-10, -10};
 	OptimizationProblem problem  = {
 		2, 
 		lower_bound,
 		upper_bound,
-		problems::sphere 
+		problems::cross_in_tray 
 	};
 
 	//double start_x =  -10;
@@ -54,23 +54,45 @@ int main()
 	//matplot::show();
 
 	int num_of_bees = 1000;
-	int iterations  = 1000;
-	int max_trials  = 10;
-	double scout_ratio    = 0.2;
-	double onlooker_ratio = 0.8;
 	std::vector<cpu::Bee> bees(num_of_bees);
-	printf("Start\n");
-	cpu::abc(
+
+	cpu::init_bees(
 		&bees,
 		num_of_bees,
-		iterations,
-		max_trials,
-		scout_ratio,
-		onlooker_ratio,
 		problem,
 		lower_bound,
 		upper_bound
 	);
+	printf("Start\n");
+
+	int    iterations  = 1000;
+	int    max_trials  = 10;
+	double scout_ratio = 0.2;
+
+	int num_of_steps = 10;
+	int step = iterations / num_of_steps;
+	for(int i = 0; i < num_of_steps; i++)
+	{
+		cpu::abc(
+			&bees,
+			num_of_bees,
+			step,
+			max_trials,
+			scout_ratio,
+			problem,
+			lower_bound,
+			upper_bound
+		);
+
+		cpu::Bee min_bee = cpu::min_bee(&bees, num_of_bees);
+		printf(
+			"Iteration #%d: x: %.2f y: %.2f value: %.2f\n", 
+			i*step,
+			min_bee.coordinates[0],
+			min_bee.coordinates[1],
+			min_bee.value
+		);
+	}
 
 	printf("Done\n");
 	std::vector<double> coordinates_x(num_of_bees);

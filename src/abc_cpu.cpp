@@ -10,15 +10,8 @@
 
 using namespace cpu;
 
-double clip(double value, double lower_bound, double upper_bound)
-{
-	if (value < lower_bound)
-		return lower_bound;
-	else if (value > upper_bound)
-		return upper_bound;
-	else
-		return value;
-}
+//TODO: dobro prashanje e za dali treba generichno da definiram
+//      za sekoja golemina na problem (mnogu for loops)
 
 struct
 {
@@ -28,6 +21,7 @@ struct
 	}
 } BeeCompare;
 
+//TODO: treba da se testira dali e soodvetno da imam inline 
 void inline generate_random_solution(
 		Bee* bee,
 		OptimizationProblem* optimization_problem,
@@ -35,6 +29,7 @@ void inline generate_random_solution(
 		double upper_bounds[]
 )
 {
+	#pragma unroll
 	for(int dim = 0; dim < (*optimization_problem).n; dim++)
 	{
 		(*bee).coordinates[dim] = 
@@ -43,6 +38,7 @@ void inline generate_random_solution(
 			upper_bounds[dim]
 		);
 	}
+
 	(*bee).value = 
 		(*optimization_problem).function(
 			(*bee).coordinates,
@@ -50,6 +46,7 @@ void inline generate_random_solution(
 		);
 	(*bee).trials = 0;
 }
+
 void inline local_optimization(
 		Bee* bee,
 		OptimizationProblem* optimization_problem,
@@ -58,6 +55,8 @@ void inline local_optimization(
 )
 {
 	Bee tmp = (*bee);
+
+	#pragma unroll
 	for(int dim = 0; dim < (*optimization_problem).n; dim++)
 	{
 		double step = utils::random::rand_bounded_double(
@@ -66,12 +65,13 @@ void inline local_optimization(
 		);
 		tmp.coordinates[dim] += step;
 		tmp.coordinates[dim] = 
-			clip(
+			utils::fast_clip(
 				tmp.coordinates[dim],
 				lower_bounds[dim],
 				upper_bounds[dim]
 			);
 	}
+
 	tmp.value = 
 		(*optimization_problem).function(
 				tmp.coordinates,
@@ -96,55 +96,49 @@ void create_roulette_wheel(
 	int total_num
 )
 {
+	//sum reduction
 	double sum = 0;
+	#pragma unroll
 	for(int bee_idx = 0; bee_idx < num_of_candidates; bee_idx++)
 	{
+		//tuka go koristam inverznoto deka go baram globalniot minimum
 		(*roulette)[bee_idx] = 1.00/(*bees)[bee_idx].value;
 		sum += (*roulette)[bee_idx];
 	}
-	for(int bee_idx = 0; bee_idx < num_of_candidates; bee_idx++)
-	{
-		//printf("roulette %.2f after %.2f", roulette[bee_idx], 100 * roulette[bee_idx] / sum);
-		(*roulette)[bee_idx] = (*roulette)[bee_idx] / sum;
-	}
+
+	//cumulative distribution
+	(*roulette)[0] = (*roulette)[0] / sum;
+	#pragma unroll
 	for(int bee_idx = 1; bee_idx < num_of_candidates; bee_idx++)
 	{
-		(*roulette)[bee_idx] += (*roulette)[bee_idx - 1];
+		(*roulette)[bee_idx] = (*roulette)[bee_idx] / sum + (*roulette)[bee_idx - 1];
 	}
-	//printf("roulette: ");
-	//for(int i = 0; i < 10; i++)
-	//	printf("%.2f ", (*roulette)[i]);
-	//printf("\n");
 }
 
-///\brief This is a sequential implementation of the
-///       artificial bee colony algorithm
-///\details 
-void cpu::abc(
-	std::vector<Bee>*   bees,
-	int                 num_of_bees, 
-	int                 max_generations, 
-	int                 trials_limit, 
-	double              ratio_of_scouts,
-	double              ratio_of_onlookers,
-	OptimizationProblem optimization_problem,
-	double              lower_bounds[],
-	double              upper_bounds[]
+int spin_roulette(
+		std::vector<double> roulette
+)
+{
+	double choice = utils::random::rand_bounded_double(0, 1);
+	for(int idx = 0; idx < roulette.size(); idx++)
+	{
+		if(choice <= roulette[idx])
+		{
+			return idx;
+		}
+	}
+	return 0;
+}
+
+void cpu::init_bees(
+		std::vector<Bee>*   bees,
+		int                 num_of_bees,
+		OptimizationProblem optimization_problem,
+		double              lower_bounds[],
+		double              upper_bounds[]
 )
 {
 	utils::random::seed_random();
-
-	//this array contains all choice params of the (*bees)
-	//Bee* (*bees) = (Bee*) malloc(
-	//	    sizeof(double) *
-	//		num_of_(*bees) *
-	//		(optimization_problem.n + 1)
-	//);
-
-	int num_of_scouts    = (int) (((double) num_of_bees) * ratio_of_scouts);
-	//ova sakam da go koristam za da imam granica na 90ti percentil
-	//int num_of_onlookers = (int) (((double) num_of_(*bees)) * ratio_of_scouts);
-
 	//Initialize initial food sources 
 	for(int bee_idx = 0; bee_idx < num_of_bees; bee_idx++)
 	{
@@ -155,6 +149,58 @@ void cpu::abc(
 			upper_bounds
 		);
 	}
+}
+
+Bee cpu::min_bee(
+	std::vector<Bee>*   bees,
+	int                 num_of_bees
+)
+{
+	Bee minimum = (*bees)[0];
+	for(int bee_idx = 1; bee_idx < num_of_bees; bee_idx++)
+	{
+		if(minimum.value > (*bees)[bee_idx].value)
+			minimum = (*bees)[bee_idx];
+	}
+	return minimum;
+}
+
+/**
+ * @brief An optimized sequential implementation of the artificial bee colony algorithm
+ * 
+ * @warning All memory used by this function is to be managed by the user
+ * @warning Concurrent modfication of the bees vector can lead to unforeseen problems
+ *          as much of the iteration presuposes the bees vector to be a continous
+ *          immutable array
+ *
+ * @param bees[inout] Bees represent solutions that are to be optimized
+ * @param num_of_bees[in]
+ * @param max_generation[in] The number of iterations the algorithm will run
+ * @param trials_limit[in] The number of optimization attempts after which
+ *        a candidate solution will be discarded by a bee
+ * @param ratio_of_scouts[in] Determines the number of candidate solutions
+ *        that onlooker bees can choose from. If set to 1.0 all bees are
+ *        considered as potential candidates, if set 0.2 only the top 20%
+ *        are considered.
+ * @param optimization_problem[in] defines a function pointer to a
+ *        function of the type: array(double) -> double
+ * @param lower_bounds[in] Determines the lower bounds for the search space
+ * @param upper_bounds[in] Determines the upper bounds for the search space
+ *
+ * @return void
+ */
+void cpu::abc(
+	std::vector<Bee>*   bees,
+	int                 num_of_bees, 
+	int                 max_generations, 
+	int                 trials_limit, 
+	double              ratio_of_scouts,
+	OptimizationProblem optimization_problem,
+	double              lower_bounds[],
+	double              upper_bounds[]
+)
+{
+	int num_of_scouts    = (int) (((double) num_of_bees) * ratio_of_scouts);
 
 	//Main Loop
 	for(int i = 0; i < max_generations; i++)
@@ -190,21 +236,16 @@ void cpu::abc(
 		//do selection
 		for(int bee_idx = num_of_scouts; bee_idx < num_of_bees; bee_idx++)
 		{
-			double choice = utils::random::rand_bounded_double(0, 1);
-			for(int j = 0; j < num_of_scouts; j++)
+			int spin = spin_roulette(roulette);
+			if((*bees)[bee_idx].value > (*bees)[spin].value)
 			{
-				if(choice <= roulette[j])
-				{
-					if((*bees)[j].value < (*bees)[bee_idx].value)
-					{
-						(*bees)[bee_idx] = (*bees)[j];
-						(*bees)[bee_idx].trials = 0;
-					}
-					else
-					{
-						(*bees)[bee_idx].trials++;
-					}
-				}
+				(*bees)[bee_idx] = (*bees)[spin];
+				(*bees)[bee_idx].trials = 0;
+			}
+			else
+			{
+				(*bees)[bee_idx] = (*bees)[spin];
+				(*bees)[bee_idx].trials++;
 			}
 		}
 
@@ -221,16 +262,6 @@ void cpu::abc(
 				);
 			}
 		}
-		//printf("After selection\n");
-		//for(int bee_idx = num_of_scouts; bee_idx < num_of_scouts + 10; bee_idx++)
-		//{
-		//	printf("x: %.2f y: %.2f value: %.2f\n", 
-		//			(*bees)[bee_idx].coordinates[0],
-		//			(*bees)[bee_idx].coordinates[1],
-		//			(*bees)[bee_idx].value);
-		//}
-		//while(true){}
-
 	}
 
 }
