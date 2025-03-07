@@ -1,8 +1,8 @@
 #include <matplot/matplot.h>
 #include <stdio.h>
 #include <math.h>
-#include "abc_cpu.hpp"
-#include "problems/problems.hpp"
+#include "abc_cpu.cuh"
+#include "problems/problems.cuh"
 #include "utils/array.hpp"
 
 /*

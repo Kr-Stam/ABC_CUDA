@@ -1,7 +1,7 @@
-#include "problems_many_local_minima.hpp"
+#include "problems_many_local_minima.cuh"
 #include <math.h>
 
-double problems::ackley(double* args, int n, double a, double b, double c)
+__host__ __device__ double problems::ackley(double* args, int n, double a, double b, double c)
 {
 	double result;
 	double sum_x2 = 0;
@@ -17,13 +17,13 @@ double problems::ackley(double* args, int n, double a, double b, double c)
 	return result;
 }
 
-double problems::ackley2(double* args, int n)
+__host__ __device__ double problems::ackley2(double* args, int n)
 {
 	return ackley(args, n, 20, 0.2, 2*M_PI);
 }
 
 ///\note this function is only a 2d function
-double problems::bukin6(double* args, int n)
+__host__ __device__ double problems::bukin6(double* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -32,7 +32,7 @@ double problems::bukin6(double* args, int n)
 }
 
 ///\note this function in only a 2d function
-double problems::cross_in_tray(double* args, int n)
+__host__ __device__ double problems::cross_in_tray(double* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -43,7 +43,7 @@ double problems::cross_in_tray(double* args, int n)
 }
 
 ///\note this function in only a 2d function
-double problems::drop_wave(double* args, int n)
+__host__ __device__ double problems::drop_wave(double* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -54,7 +54,7 @@ double problems::drop_wave(double* args, int n)
 }
 
 ///\note this function in only a 2d function
-double problems::eggholder(double* args, int n)
+__host__ __device__ double problems::eggholder(double* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -63,7 +63,7 @@ double problems::eggholder(double* args, int n)
 }
 
 ///\note this function is only a 1d function
-double problems::gramacy_and_lee(double* args, int n)
+__host__ __device__ double problems::gramacy_and_lee(double* args, int n)
 {
 	if(n < 1) return 0;
 
@@ -72,7 +72,7 @@ double problems::gramacy_and_lee(double* args, int n)
 		   tmp * tmp * tmp * tmp;
 }
 
-double problems::griewank(double* args, int n)
+__host__ __device__ double problems::griewank(double* args, int n)
 {
 	double result  = 0;
 	double product = 1;
@@ -87,7 +87,7 @@ double problems::griewank(double* args, int n)
 }
 
 ///\note This only a 2d function
-double problems::holder_table(double* args, int n)
+__host__ __device__ double problems::holder_table(double* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -96,7 +96,7 @@ double problems::holder_table(double* args, int n)
 }
 
 ///\note A has dimensions nxm
-double problems::langerman(double* args, int n, double* c, int m, double* A)
+__host__ __device__ double problems::langerman(double* args, int n, double* c, int m, double* A)
 {
 	double result = 0;
 	for(int i = 0; i < m; i++)
@@ -114,7 +114,7 @@ double problems::langerman(double* args, int n, double* c, int m, double* A)
 	return result;
 }
 
-double problems::langerman2(double* args, int n)
+__host__ __device__ double problems::langerman2(double* args, int n)
 {
 	double A[] = {
 		3, 5,
@@ -128,7 +128,7 @@ double problems::langerman2(double* args, int n)
 	return langerman(args, n, c, 5, A);
 }
 
-double problems::levy(double* args, int n)
+__host__ __device__ double problems::levy(double* args, int n)
 {
 	double tmp, tmp1;
 	double result = 0;
@@ -154,7 +154,7 @@ double problems::levy(double* args, int n)
 }
 
 ///\note This is only a 2d function
-double problems::levy13(double* args, int n)
+__host__ __device__ double problems::levy13(double* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -171,7 +171,7 @@ double problems::levy13(double* args, int n)
 ///\brief This is a fucntion with mutiple global
 ///       maxima which is commonly used to test
 ///       optimization functions
-double problems::rastrigin(int a, double* x, int n)
+__host__ __device__ double problems::rastrigin(int a, double* x, int n)
 {
 	float result = a * n;
 	for(int i = 0; i < n; i++)
@@ -184,13 +184,13 @@ double problems::rastrigin(int a, double* x, int n)
 ///brief This function is a wrapper around rastrigin
 ///      in order to make it compatible to the problem
 ///      definition
-double problems::rastrigin2(double* args, int n)
+__host__ __device__ double problems::rastrigin2(double* args, int n)
 {
 	return rastrigin(10, args, n);
 }
 
 ///\note This is only a 2d function
-double problems::schaffer2(double* args, int n)
+__host__ __device__ double problems::schaffer2(double* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -202,7 +202,7 @@ double problems::schaffer2(double* args, int n)
 }
 
 ///\note This is only a 2d function
-double problems::schaffer4(double* args, int n)
+__host__ __device__ double problems::schaffer4(double* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -213,7 +213,7 @@ double problems::schaffer4(double* args, int n)
 	return 0.5 + (tmp1*tmp1 - 0.5)/tmp2/tmp2;
 }
 
-double problems::schwefel(double* args, int n)
+__host__ __device__ double problems::schwefel(double* args, int n)
 {
 	double result = 418.9829*n;
 	for(int i = 0; i < n; i++)
@@ -225,7 +225,7 @@ double problems::schwefel(double* args, int n)
 }
 
 ///\note This is only a 2d function
-double problems::shubert(double* args, int n)
+__host__ __device__ double problems::shubert(double* args, int n)
 {
 	if(n < 2) return 0;
 	double sum1 = 0;

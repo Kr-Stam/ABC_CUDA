@@ -1,5 +1,4 @@
-#include "abc_cpu.hpp"
-#include "problems/problems.hpp"
+#include "abc_cpu.cuh"
 #include "utils/utils.hpp"
 #include <stdlib.h>
 #include <math.h>

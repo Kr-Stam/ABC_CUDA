@@ -1,8 +1,8 @@
-#include "problems_bowl_shaped.hpp"
+#include "problems_bowl_shaped.cuh"
 #include <math.h>
 #include <stdio.h>
 
-double problems::bohachevsky1(double* args, int n)
+__host__ __device__ double problems::bohachevsky1(double* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -11,7 +11,7 @@ double problems::bohachevsky1(double* args, int n)
 		   0.4*std::cos(4*M_PI*args[1]) + 0.7;
 }
 
-double problems::bohachevsky2(double* args, int n)
+__host__ __device__ double problems::bohachevsky2(double* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -19,7 +19,7 @@ double problems::bohachevsky2(double* args, int n)
 		   0.3*std::cos(3*M_PI*args[0])*std::cos(4*M_PI*args[1]) + 0.3;
 }
 
-double problems::bohachevsky3(double* args, int n)
+__host__ __device__ double problems::bohachevsky3(double* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -27,7 +27,7 @@ double problems::bohachevsky3(double* args, int n)
 		   0.3*std::cos(3*M_PI*args[0] + 4*M_PI*args[1]) + 0.3;
 }
 
-double problems::sphere(double* args, int n)
+__host__ __device__ double problems::sphere(double* args, int n)
 {
 	double result = 0;
 	for(int i = 0; i < n; i++)
@@ -37,7 +37,7 @@ double problems::sphere(double* args, int n)
 	return result;
 }
 
-double problems::perm(double* args, int n, int b)
+__host__ __device__ double problems::perm(double* args, int n, int b)
 {
 	double result = 0;
 	for(int i = 0; i < n; i++)
@@ -54,12 +54,12 @@ double problems::perm(double* args, int n, int b)
 	return result;
 }
 
-double problems::perm2(double* args, int n)
+__host__ __device__ double problems::perm2(double* args, int n)
 {
 	return perm(args, n, 10);
 }
 
-double problems::rotated_hyper_elipsoid(double* args, int n)
+__host__ __device__ double problems::rotated_hyper_elipsoid(double* args, int n)
 {
 	double result = 0;
 	for(int i = 0; i < n; i++)
@@ -74,7 +74,7 @@ double problems::rotated_hyper_elipsoid(double* args, int n)
 	return result;
 }
 
-double problems::sum_of_different_powers(double* args, int n)
+__host__ __device__ double problems::sum_of_different_powers(double* args, int n)
 {
 	double result = 0;
 	for(int i = 0; i < n; i++)
@@ -84,7 +84,7 @@ double problems::sum_of_different_powers(double* args, int n)
 	return result;
 }
 
-double problems::sum_squares(double* args, int n)
+__host__ __device__ double problems::sum_squares(double* args, int n)
 {
 	double result = 0;
 	for(int i = 0; i < n; i++)
@@ -94,7 +94,7 @@ double problems::sum_squares(double* args, int n)
 	return result;
 }
 
-double problems::trid(double* args, int n)
+__host__ __device__ double problems::trid(double* args, int n)
 {
 	double result = 0;
 	double tmp = args[0] - 1;

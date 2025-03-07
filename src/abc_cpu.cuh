@@ -1,4 +1,4 @@
-#include "problems/problems.hpp"
+#include "problems/problems.cuh"
 #include "vector"
 
 namespace cpu

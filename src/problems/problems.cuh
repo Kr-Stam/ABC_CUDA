@@ -1,11 +1,11 @@
 #pragma once
 
-#include "problems_many_local_minima.hpp"
-#include "problems_bowl_shaped.hpp"
-#include "problems_plate_shaped.hpp"
-#include "problems_valley_shaped.hpp"
-#include "problems_steep_ridges.hpp"
-#include "problems_other.hpp"
+#include "problems_many_local_minima.cuh"
+#include "problems_bowl_shaped.cuh"
+#include "problems_plate_shaped.cuh"
+#include "problems_valley_shaped.cuh"
+#include "problems_steep_ridges.cuh"
+#include "problems_other.cuh"
 
 typedef struct OptimizationProblem
 {
@@ -13,10 +13,9 @@ typedef struct OptimizationProblem
 	double* upper_bound;
 	double* lower_bound;
 	double(*function)(double*, int);
-	//? dali bi bilo podobro da e ova klasa?
 } OptimizationProblem;
+//? ako imam vreme za podolgo refaktoriranje ova kje go napravam klasa
 
-//TODO: Ova treba da go trgnam na drugo mesto
 //site osven 4d+ funkciite se testirani da se tochni
 //OptimizationProblem p1  = {2, problems::rastrigin2             };
 //OptimizationProblem p2  = {2, problems::sphere                 };
