@@ -1,100 +1,77 @@
-#include <matplot/matplot.h>
+/******************************************************************************
+ * @file main.cu                                                              *
+ * @brief Testing and measuring execution time and accuracy of the sequential *
+ *        and parallel implementation of the ABC (Artificial Bee Colony)      *
+ *        algorithm                                                           *
+ * @author Kristijan Stameski                                                 *
+ ******************************************************************************/
+
 #include <stdio.h>
 #include <math.h>
-#include "abc_cpu.cuh"
-#include "problems/problems.cuh"
+#include "abc_cpu.h"
+#include "abc_gpu.cuh"
+#include "problems/problems.h"
+//#include "problems/cpu/problems_many_local_minima.h"
+#include "problems/gpu/problems_many_local_minima.cuh"
 #include "utils/array.hpp"
-
-/*
-   Rastrigin function
-"$GPVAL_LAST_MULTIPLOT" line 51: Cannot read from '-' during multiplot playback
-   f(x) = An + sum over an interval of n values
-*/
 
 //kje mora da gi izvadam kako vrednosti posle
 
-void generate_linspace(std::vector<double> v, double start, double end, int n)
+template<unsigned int dimensions>
+void abc_cpu_test(
+	int      num_of_bees,
+	opt_func optimization_function,
+	double   lower_bound[],
+	double   upper_bound[],
+	int      iterations,
+	int      max_trials,
+	double   scout_ratio
+)
 {
-	double step = (end - start) / n;
-	for(int i = 0; i < n; i++)
-	{
-		double tmp;
-		if(i == 0) tmp  = start;
-		else       tmp += step;
-
-		v.push_back(tmp);
-	}
-}
-
-int main()
-{
-	double upper_bound[] = {10, 10};
-	double lower_bound[] = {-10, -10};
-	OptimizationProblem problem  = {
-		2, 
-		lower_bound,
-		upper_bound,
-		problems::cross_in_tray 
-	};
-
-	//double start_x =  -10;
-	//double end_x   = +10;
-	//double start_y =  -10;
-	//double end_y   = +10;
-    //auto [X, Y] = matplot::meshgrid(
-	//		matplot::linspace(start_x, end_x, 100), 
-	//		matplot::linspace(start_y, end_y, 100)
-	//);
-    //auto Z = matplot::transform(X, Y, [&problem](double x, double y) {
-	//	double point[] = {x, y};
-    //    return problem.function(point, problem.n);
-    //});
-	//matplot::surf(X, Y, Z);
-
-	//matplot::show();
-
-	int num_of_bees = 1000;
 	std::vector<cpu::Bee> bees(num_of_bees);
 
-	cpu::init_bees(
+	cpu::init_bees<dimensions>(
 		&bees,
 		num_of_bees,
-		problem,
+		optimization_function,
 		lower_bound,
 		upper_bound
 	);
+
 	printf("Start\n");
 
-	int    iterations  = 1000;
-	int    max_trials  = 10;
-	double scout_ratio = 0.2;
 
+	//debugging
+	printf("Printf debugging ABC\n");
 	int num_of_steps = 10;
 	int step = iterations / num_of_steps;
 	for(int i = 0; i < num_of_steps; i++)
 	{
-		cpu::abc(
+		cpu::abc<dimensions>(
 			&bees,
 			num_of_bees,
 			step,
 			max_trials,
 			scout_ratio,
-			problem,
+			optimization_function,
 			lower_bound,
 			upper_bound
 		);
 
 		cpu::Bee min_bee = cpu::min_bee(&bees, num_of_bees);
-		printf(
-			"Iteration #%d: x: %.2f y: %.2f value: %.2f\n", 
-			i*step,
-			min_bee.coordinates[0],
-			min_bee.coordinates[1],
-			min_bee.value
-		);
+		printf("Iteration #%03d: ", i*step);
+
+		for(int j = 0; j <= dimensions; j++)
+		{
+			printf("x%d: %.2f ", j, min_bee.coordinates[j]);
+		}
+		printf("value: %.2f\n", min_bee.value);
 	}
 
 	printf("Done\n");
+
+	//ova debagiranje isto taka sakam da go smenam da e
+	//pogenerichno
 	std::vector<double> coordinates_x(num_of_bees);
 	std::vector<double> coordinates_y(num_of_bees);
 	//std::vector<double> values(num_of_bees);
@@ -113,23 +90,59 @@ int main()
 				bees[bee_idx].coordinates[1],
 				bees[bee_idx].value);
 	}
+}
 
-	//matplot::scatter3(coordinates_x, coordinates_y, values);
+#define DIMENSIONS 2
 
-	//matplot::show();
+int main()
+{
+	double upper_bound[] = {+10, +10};
+	double lower_bound[] = {-10, -10};
+	opt_func optimization_function = problems::gpu::cross_in_tray;
 
-	/*
-    std::vector<double> t  = matplot::iota(0, M_PI / 50, 10 * M_PI);
-    std::vector<double> st = matplot::transform(t, [](auto x) { return sin(x); });
-    std::vector<double> ct = matplot::transform(t, [](auto x) { return cos(x); });
-    auto l = matplot::plot3(st, ct, t);
-	matplot::show();
-	*/
-    //std::vector<double> xt = matplot::iota(start, step, end);
-    //std::vector<double> yt = matplot::iota(start, step, end);
-    //std::vector<double> zt = matplot::transform(t, [](auto x) { return cos(x); });
-    //auto l = matplot::plot3(st, ct, t);
-	//matplot::show();
+	//abc_cpu_test<2>(
+	//	1000,
+	//	optimization_function,
+	//	lower_bound,
+	//	upper_bound,
+	//	1000,
+	//	10,
+	//	0.2
+	//);
+
+	//variable initialization
+	int num_of_bees     =  1024;
+	int max_generations = 10000;
+  	int max_trials      =    20;
+
+	double* coordinates = (double*) malloc(
+		num_of_bees * sizeof(double) * DIMENSIONS
+	);
+	double* values = (double*) malloc(
+		num_of_bees * sizeof(double)
+	);
+	gpu::launch_abc(
+			coordinates,
+			values,
+			num_of_bees,
+			max_generations,
+			max_trials,
+			optimization_function,
+			lower_bound,
+			upper_bound,
+			10
+	);
+
+	for(int i = 0; i < num_of_bees; i++)
+	{
+		printf(
+			"Bee%03d: x=%.2f y=%.2f value=%.2f\n",
+			i,
+			coordinates[i*DIMENSIONS + 0],
+			coordinates[i*DIMENSIONS + 1],
+			values[i]
+		);
+	}
 
 	return 0;
 }

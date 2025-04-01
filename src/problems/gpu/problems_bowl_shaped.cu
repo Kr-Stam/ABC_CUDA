@@ -2,7 +2,7 @@
 #include <math.h>
 #include <stdio.h>
 
-__host__ __device__ double problems::bohachevsky1(double* args, int n)
+__device__ double problems::gpu::bohachevsky1(double* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -11,7 +11,7 @@ __host__ __device__ double problems::bohachevsky1(double* args, int n)
 		   0.4*std::cos(4*M_PI*args[1]) + 0.7;
 }
 
-__host__ __device__ double problems::bohachevsky2(double* args, int n)
+__device__ double problems::gpu::bohachevsky2(double* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -19,7 +19,7 @@ __host__ __device__ double problems::bohachevsky2(double* args, int n)
 		   0.3*std::cos(3*M_PI*args[0])*std::cos(4*M_PI*args[1]) + 0.3;
 }
 
-__host__ __device__ double problems::bohachevsky3(double* args, int n)
+__device__ double problems::gpu::bohachevsky3(double* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -27,7 +27,7 @@ __host__ __device__ double problems::bohachevsky3(double* args, int n)
 		   0.3*std::cos(3*M_PI*args[0] + 4*M_PI*args[1]) + 0.3;
 }
 
-__host__ __device__ double problems::sphere(double* args, int n)
+__device__ double problems::gpu::sphere(double* args, int n)
 {
 	double result = 0;
 	for(int i = 0; i < n; i++)
@@ -37,7 +37,7 @@ __host__ __device__ double problems::sphere(double* args, int n)
 	return result;
 }
 
-__host__ __device__ double problems::perm(double* args, int n, int b)
+__device__ double problems::gpu::perm(double* args, int n, int b)
 {
 	double result = 0;
 	for(int i = 0; i < n; i++)
@@ -54,12 +54,12 @@ __host__ __device__ double problems::perm(double* args, int n, int b)
 	return result;
 }
 
-__host__ __device__ double problems::perm2(double* args, int n)
+__device__ double problems::gpu::perm2(double* args, int n)
 {
 	return perm(args, n, 10);
 }
 
-__host__ __device__ double problems::rotated_hyper_elipsoid(double* args, int n)
+__device__ double problems::gpu::rotated_hyper_elipsoid(double* args, int n)
 {
 	double result = 0;
 	for(int i = 0; i < n; i++)
@@ -74,7 +74,7 @@ __host__ __device__ double problems::rotated_hyper_elipsoid(double* args, int n)
 	return result;
 }
 
-__host__ __device__ double problems::sum_of_different_powers(double* args, int n)
+__device__ double problems::gpu::sum_of_different_powers(double* args, int n)
 {
 	double result = 0;
 	for(int i = 0; i < n; i++)
@@ -84,7 +84,7 @@ __host__ __device__ double problems::sum_of_different_powers(double* args, int n
 	return result;
 }
 
-__host__ __device__ double problems::sum_squares(double* args, int n)
+__device__ double problems::gpu::sum_squares(double* args, int n)
 {
 	double result = 0;
 	for(int i = 0; i < n; i++)
@@ -94,7 +94,7 @@ __host__ __device__ double problems::sum_squares(double* args, int n)
 	return result;
 }
 
-__host__ __device__ double problems::trid(double* args, int n)
+__device__ double problems::gpu::trid(double* args, int n)
 {
 	double result = 0;
 	double tmp = args[0] - 1;

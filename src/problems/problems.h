@@ -1,20 +1,24 @@
 #pragma once
 
-#include "problems_many_local_minima.cuh"
-#include "problems_bowl_shaped.cuh"
-#include "problems_plate_shaped.cuh"
-#include "problems_valley_shaped.cuh"
-#include "problems_steep_ridges.cuh"
-#include "problems_other.cuh"
+//#include "cpu/problems_many_local_minima.h"
+//#include "cpu/problems_bowl_shaped.h"
+//#include "cpu/problems_plate_shaped.h"
+//#include "cpu/problems_valley_shaped.h"
+//#include "cpu/problems_steep_ridges.h"
+//#include "cpu/problems_other.h"
 
-typedef struct OptimizationProblem
-{
-	int     n;
-	double* upper_bound;
-	double* lower_bound;
-	double(*function)(double*, int);
-} OptimizationProblem;
-//? ako imam vreme za podolgo refaktoriranje ova kje go napravam klasa
+typedef double(*opt_func)(double*, int);
+
+namespace problems::gpu {}
+namespace problems::cpu {}
+
+//typedef struct OptimizationProblem
+//{
+//	int     n;
+//	double* upper_bound;
+//	double* lower_bound;
+//	double(*function)(double*, int);
+//} OptimizationProblem;
 
 //site osven 4d+ funkciite se testirani da se tochni
 //OptimizationProblem p1  = {2, problems::rastrigin2             };

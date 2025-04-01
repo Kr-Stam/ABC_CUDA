@@ -1,7 +1,7 @@
 #include "problems_steep_ridges.cuh"
 #include <math.h>
 
-__host__ __device__ double problems::dejong5(double* args, int n)
+__device__ double problems::gpu::dejong5(double* args, int n)
 {
 	double result = 0.002;
 	for(int i = 0; i < 25; i++)
@@ -14,7 +14,7 @@ __host__ __device__ double problems::dejong5(double* args, int n)
 	return 1.0 / result;
 }
 
-__host__ __device__ double problems::easom(double* args, int n)
+__device__ double problems::gpu::easom(double* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -25,7 +25,7 @@ __host__ __device__ double problems::easom(double* args, int n)
 }
 
 
-__host__ __device__ double problems::michalewicz(double* args, int n, int m)
+__device__ double problems::gpu::michalewicz(double* args, int n, int m)
 {
 	double result = 0;
 
@@ -37,7 +37,7 @@ __host__ __device__ double problems::michalewicz(double* args, int n, int m)
 	return result;
 }
 
-__host__ __device__ double problems::michalewicz2(double* args, int n)
+__device__ double problems::gpu::michalewicz2(double* args, int n)
 {
 	return michalewicz(args, n, 10);
 }

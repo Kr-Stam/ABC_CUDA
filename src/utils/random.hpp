@@ -1,3 +1,5 @@
+#pragma once
+
 namespace utils::random
 {
 	double rand_bounded_double(double lower_bound, double upper_bound);

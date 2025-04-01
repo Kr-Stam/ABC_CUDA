@@ -1,7 +1,7 @@
-#include "problems_plate_shaped.cuh"
+#include "problems_plate_shaped.h"
 #include <math.h>
 
-__host__ __device__ double problems::booth(double* args, int n)
+double problems::cpu::booth(double* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -10,7 +10,7 @@ __host__ __device__ double problems::booth(double* args, int n)
 	return tmp1*tmp1 + tmp2*tmp2;
 }
 
-__host__ __device__ double problems::matyas(double* args, int n)
+double problems::cpu::matyas(double* args, int n)
 {
 	if (n < 2) return 0;
 
@@ -18,7 +18,7 @@ __host__ __device__ double problems::matyas(double* args, int n)
 	       0.48*args[0]*args[1];
 }
 
-__host__ __device__ double problems::mccormick(double* args, int n)
+double problems::cpu::mccormick(double* args, int n)
 {
 	if (n < 2) return 0;
 
@@ -27,7 +27,7 @@ __host__ __device__ double problems::mccormick(double* args, int n)
 	       1.5*args[0] + 2.5*args[1] + 1;
 }
 
-__host__ __device__ double problems::power_sum(double* args, int n, double* b)
+double problems::cpu::power_sum(double* args, int n, double* b)
 {
 	double result = 0;
 	for(int i = 0; i < n; i++)
@@ -42,14 +42,14 @@ __host__ __device__ double problems::power_sum(double* args, int n, double* b)
 	return result;
 }
 
-__host__ __device__ double problems::power_sum2(double* args, int n)
+double problems::cpu::power_sum2(double* args, int n)
 {
 	double b[] = {8, 18, 44, 114};
 
-	return problems::power_sum(args, n, b);
+	return problems::cpu::power_sum(args, n, b);
 }
 
-__host__ __device__ double problems::zakharov(double* args, int n)
+double problems::cpu::zakharov(double* args, int n)
 {
 	double sum1 = 0;
 	double sum2 = 0;

@@ -1,7 +1,7 @@
 #include "problems_valley_shaped.cuh"
 #include <math.h>
 
-__host__ __device__ double problems::three_hump_camel(double* args, int n)
+__device__ double problems::gpu::three_hump_camel(double* args, int n)
 {
 	double x2 = args[0]*args[0];
 
@@ -9,7 +9,7 @@ __host__ __device__ double problems::three_hump_camel(double* args, int n)
 	       args[1]*args[1];
 }
 
-__host__ __device__ double problems::six_hump_camel(double* args, int n)
+__device__ double problems::gpu::six_hump_camel(double* args, int n)
 {
 	double x2 = args[0]*args[0];
 	double y2 = args[1]*args[1];
@@ -18,7 +18,7 @@ __host__ __device__ double problems::six_hump_camel(double* args, int n)
 	       (-4 + 4*y2)*y2;
 }
 
-__host__ __device__ double problems::dixon_price(double* args, int n)
+__device__ double problems::gpu::dixon_price(double* args, int n)
 {
 	double result = 0;
 	double tmp = (args[0] - 1);
@@ -32,7 +32,7 @@ __host__ __device__ double problems::dixon_price(double* args, int n)
 	return result;
 }
 
-__host__ __device__ double problems::rosenbrock(double* args, int n)
+__device__ double problems::gpu::rosenbrock(double* args, int n)
 {
 	double result = 0;
 	for(int i = 0; i < n - 1; i++)

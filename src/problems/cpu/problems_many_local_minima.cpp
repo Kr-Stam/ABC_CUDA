@@ -1,7 +1,7 @@
-#include "problems_many_local_minima.cuh"
+#include "problems_many_local_minima.h"
 #include <math.h>
 
-__host__ __device__ double problems::ackley(double* args, int n, double a, double b, double c)
+double problems::cpu::ackley(double* args, int n, double a, double b, double c)
 {
 	double result;
 	double sum_x2 = 0;
@@ -17,13 +17,13 @@ __host__ __device__ double problems::ackley(double* args, int n, double a, doubl
 	return result;
 }
 
-__host__ __device__ double problems::ackley2(double* args, int n)
+double problems::cpu::ackley2(double* args, int n)
 {
 	return ackley(args, n, 20, 0.2, 2*M_PI);
 }
 
 ///\note this function is only a 2d function
-__host__ __device__ double problems::bukin6(double* args, int n)
+double problems::cpu::bukin6(double* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -32,7 +32,7 @@ __host__ __device__ double problems::bukin6(double* args, int n)
 }
 
 ///\note this function in only a 2d function
-__host__ __device__ double problems::cross_in_tray(double* args, int n)
+double problems::cpu::cross_in_tray(double* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -43,7 +43,7 @@ __host__ __device__ double problems::cross_in_tray(double* args, int n)
 }
 
 ///\note this function in only a 2d function
-__host__ __device__ double problems::drop_wave(double* args, int n)
+double problems::cpu::drop_wave(double* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -54,7 +54,7 @@ __host__ __device__ double problems::drop_wave(double* args, int n)
 }
 
 ///\note this function in only a 2d function
-__host__ __device__ double problems::eggholder(double* args, int n)
+double problems::cpu::eggholder(double* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -63,7 +63,7 @@ __host__ __device__ double problems::eggholder(double* args, int n)
 }
 
 ///\note this function is only a 1d function
-__host__ __device__ double problems::gramacy_and_lee(double* args, int n)
+double problems::cpu::gramacy_and_lee(double* args, int n)
 {
 	if(n < 1) return 0;
 
@@ -72,7 +72,7 @@ __host__ __device__ double problems::gramacy_and_lee(double* args, int n)
 		   tmp * tmp * tmp * tmp;
 }
 
-__host__ __device__ double problems::griewank(double* args, int n)
+double problems::cpu::griewank(double* args, int n)
 {
 	double result  = 0;
 	double product = 1;
@@ -87,7 +87,7 @@ __host__ __device__ double problems::griewank(double* args, int n)
 }
 
 ///\note This only a 2d function
-__host__ __device__ double problems::holder_table(double* args, int n)
+double problems::cpu::holder_table(double* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -96,7 +96,7 @@ __host__ __device__ double problems::holder_table(double* args, int n)
 }
 
 ///\note A has dimensions nxm
-__host__ __device__ double problems::langerman(double* args, int n, double* c, int m, double* A)
+double problems::cpu::langerman(double* args, int n, double* c, int m, double* A)
 {
 	double result = 0;
 	for(int i = 0; i < m; i++)
@@ -114,7 +114,7 @@ __host__ __device__ double problems::langerman(double* args, int n, double* c, i
 	return result;
 }
 
-__host__ __device__ double problems::langerman2(double* args, int n)
+double problems::cpu::langerman2(double* args, int n)
 {
 	double A[] = {
 		3, 5,
@@ -128,7 +128,7 @@ __host__ __device__ double problems::langerman2(double* args, int n)
 	return langerman(args, n, c, 5, A);
 }
 
-__host__ __device__ double problems::levy(double* args, int n)
+double problems::cpu::levy(double* args, int n)
 {
 	double tmp, tmp1;
 	double result = 0;
@@ -154,7 +154,7 @@ __host__ __device__ double problems::levy(double* args, int n)
 }
 
 ///\note This is only a 2d function
-__host__ __device__ double problems::levy13(double* args, int n)
+double problems::cpu::levy13(double* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -171,7 +171,7 @@ __host__ __device__ double problems::levy13(double* args, int n)
 ///\brief This is a fucntion with mutiple global
 ///       maxima which is commonly used to test
 ///       optimization functions
-__host__ __device__ double problems::rastrigin(int a, double* x, int n)
+double problems::cpu::rastrigin(int a, double* x, int n)
 {
 	float result = a * n;
 	for(int i = 0; i < n; i++)
@@ -184,13 +184,13 @@ __host__ __device__ double problems::rastrigin(int a, double* x, int n)
 ///brief This function is a wrapper around rastrigin
 ///      in order to make it compatible to the problem
 ///      definition
-__host__ __device__ double problems::rastrigin2(double* args, int n)
+double problems::cpu::rastrigin2(double* args, int n)
 {
 	return rastrigin(10, args, n);
 }
 
 ///\note This is only a 2d function
-__host__ __device__ double problems::schaffer2(double* args, int n)
+double problems::cpu::schaffer2(double* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -202,7 +202,7 @@ __host__ __device__ double problems::schaffer2(double* args, int n)
 }
 
 ///\note This is only a 2d function
-__host__ __device__ double problems::schaffer4(double* args, int n)
+double problems::cpu::schaffer4(double* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -213,7 +213,7 @@ __host__ __device__ double problems::schaffer4(double* args, int n)
 	return 0.5 + (tmp1*tmp1 - 0.5)/tmp2/tmp2;
 }
 
-__host__ __device__ double problems::schwefel(double* args, int n)
+double problems::cpu::schwefel(double* args, int n)
 {
 	double result = 418.9829*n;
 	for(int i = 0; i < n; i++)
@@ -225,7 +225,7 @@ __host__ __device__ double problems::schwefel(double* args, int n)
 }
 
 ///\note This is only a 2d function
-__host__ __device__ double problems::shubert(double* args, int n)
+double problems::cpu::shubert(double* args, int n)
 {
 	if(n < 2) return 0;
 	double sum1 = 0;

@@ -12,8 +12,9 @@ if (UNIX)
 	set(CMAKE_CUDA_STANDARD 17)
 	set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-	message(STATUS "Linking to matplotplusplus opencv")
-	add_subdirectory(matplotplusplus)
+	#turn on linking to matplotplusplus
+	#message(STATUS "Linking to matplotplusplus opencv")
+	#add_subdirectory(matplotplusplus)
 	#find_package(Matplot++ REQUIRED PATHS ~/aur/matplotplusplus/src/build/)
 
 endif()
@@ -26,8 +27,8 @@ if(WIN32)
 	set(CMAKE_CUDA_STANDARD 17)
 	set(DCMAKE_CUDA_ARCHITECTURES native)
 
-	message(STATUS "Linking to matplotplusplus opencv")
-	add_subdirectory(matplotplusplus)
+	#message(STATUS "Linking to matplotplusplus opencv")
+	#add_subdirectory(matplotplusplus)
 	#find_package(Matplot++ REQUIRED)
 endif()
 
@@ -74,25 +75,35 @@ add_executable(
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/utils/random.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/utils/random.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/utils/utils.cpp"
-	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/problems_many_local_minima.cu"
-	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/problems_bowl_shaped.cu"
-	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/problems_plate_shaped.cu"
-	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/problems_valley_shaped.cu"
-	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/problems_steep_ridges.cu"
-	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/problems_other.cu"
-	"${CMAKE_CURRENT_SOURCE_DIR}/src/abc_cpu.cu"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/problems.h"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/gpu/problems_many_local_minima.cu"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/gpu/problems_bowl_shaped.cu"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/gpu/problems_plate_shaped.cu"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/gpu/problems_valley_shaped.cu"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/gpu/problems_steep_ridges.cu"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/gpu/problems_other.cu"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/cpu/problems_many_local_minima.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/cpu/problems_bowl_shaped.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/cpu/problems_plate_shaped.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/cpu/problems_valley_shaped.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/cpu/problems_steep_ridges.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/cpu/problems_other.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/abc_cpu.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/abc_gpu.cu"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/main.cu"
 	)
-target_link_libraries( 
-	"${CMAKE_PROJECT_NAME}"
-	#PUBLIC matplot
-	Matplot++::matplot
-)
+
+# turn off matplotplusplus
+# target_link_libraries( 
+# 	"${CMAKE_PROJECT_NAME}"
+# 	#PUBLIC matplot
+# 	Matplot++::matplot
+# )
 
 target_compile_options(${CMAKE_PROJECT_NAME}
     PRIVATE $<$<COMPILE_LANGUAGE:CXX>: >
-    PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: -Xcudafe --diag_suppress=esa_on_defaulted_function_ignored> # -g -G --ptxas-options=–allow-expensive-optimizations=true>
+    PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: -Xcudafe --diag_suppress=esa_on_defaulted_function_ignored --expt-relaxed-constexpr>
+	# -g -G --ptxas-options=–allow-expensive-optimizations=true>
 )
 
 set_property(TARGET ${CMAKE_PROJECT_NAME} PROPERTY CUDA_SEPARABLE_COMPILATION ON)

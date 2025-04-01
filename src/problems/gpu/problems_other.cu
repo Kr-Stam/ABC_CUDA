@@ -1,7 +1,7 @@
 #include "problems_other.cuh"
 #include <math.h>
 
-__host__ __device__ double problems::beale(double* args, int n)
+__device__ double problems::gpu::beale(double* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -13,7 +13,7 @@ __host__ __device__ double problems::beale(double* args, int n)
 	return tmp2*tmp2 + tmp3*tmp3 + tmp4*tmp4;
 }
 
-__host__ __device__ double problems::branin(double* args, int n, double a, double b, double c, double r, double s, double t)
+__device__ double problems::gpu::branin(double* args, int n, double a, double b, double c, double r, double s, double t)
 {
 	if(n < 2) return 0;
 
@@ -22,12 +22,12 @@ __host__ __device__ double problems::branin(double* args, int n, double a, doubl
 	return a*tmp*tmp + s*(1-t)*std::cos(args[0]) + s;
 }
 
-__host__ __device__ double problems::branin2(double* args, int n)
+__device__ double problems::gpu::branin2(double* args, int n)
 {
-	return problems::branin(args, n, 1, 5.1/4.0/M_PI/M_PI, 5/M_PI, 6, 10, 1.0/8.0/M_PI);
+	return problems::gpu::branin(args, n, 1, 5.1/4.0/M_PI/M_PI, 5/M_PI, 6, 10, 1.0/8.0/M_PI);
 }
 
-__host__ __device__ double problems::colville(double* args, int n)
+__device__ double problems::gpu::colville(double* args, int n)
 {
 	if(n < 4) return 0;
 	double tmp1 = args[0]*args[0] - args[1];
@@ -41,14 +41,14 @@ __host__ __device__ double problems::colville(double* args, int n)
 		   19.8*tmp5*tmp6;
 }
 
-__host__ __device__ double problems::forrester(double* args, int n)
+__device__ double problems::gpu::forrester(double* args, int n)
 {
 	if(n < 1) return 0;
 	double tmp = 6*args[0] - 2;
 	return tmp*tmp*std::sin(12*args[0] - 4);
 }
 
-__host__ __device__ double problems::goldstein_price(double* args, int n)
+__device__ double problems::gpu::goldstein_price(double* args, int n)
 {
 	double tmp1 = args[0] + args[1] + 1;
 	double x2 = args[0]*args[0];
@@ -75,7 +75,7 @@ __constant__ const double h3_p[] = {
 	0.0381, 0.5743, 0.8828
 };
 
-__host__ __device__ double problems::hartmann3d (double* args, int n)
+__device__ double problems::gpu::hartmann3d (double* args, int n)
 {
 	if(n < 3) return 0;
 
@@ -107,7 +107,7 @@ __constant__ const double h4_p[] = {
 	0.4047, 0.8828, 0.8732, 0.5743, 0.1091, 0.0381
 };
 
-__host__ __device__ double problems::hartmann4d (double* args, int n)
+__device__ double problems::gpu::hartmann4d (double* args, int n)
 {
 	if(n < 4) return 0;
 
@@ -139,7 +139,7 @@ __constant__ const double h6_p[] = {
 	0.4047, 0.8828, 0.8732, 0.5743, 0.1091, 0.0381
 };
 
-__host__ __device__ double problems::hartmann6d (double* args, int n)
+__device__ double problems::gpu::hartmann6d (double* args, int n)
 {
 	if(n < 6) return 0;
 
@@ -157,7 +157,7 @@ __host__ __device__ double problems::hartmann6d (double* args, int n)
 	return outer;
 }
 
-__host__ __device__ double problems::permdb(double* args, int n, double b)
+__device__ double problems::gpu::permdb(double* args, int n, double b)
 {
 	double outer = 0;
 	for(int i = 0; i < n; i++)
@@ -174,12 +174,12 @@ __host__ __device__ double problems::permdb(double* args, int n, double b)
 	return outer;
 }
 
-__host__ __device__ double problems::permdb2(double* args, int n)
+__device__ double problems::gpu::permdb2(double* args, int n)
 {
-	return problems::permdb(args, n, 0.5);
+	return problems::gpu::permdb(args, n, 0.5);
 }
 
-__host__ __device__ double problems::powell(double* args, int n)
+__device__ double problems::gpu::powell(double* args, int n)
 {
 	if(n < 4) return 0;
 
@@ -197,7 +197,7 @@ __host__ __device__ double problems::powell(double* args, int n)
 	return result;
 }
 
-__host__ __device__ double problems::shekel(double* args, int n, int m, const double* beta, const double* C)
+__device__ double problems::gpu::shekel(double* args, int n, int m, const double* beta, const double* C)
 {
 	double outer = 0;
 	for(int i = 0; i < m; i++)
@@ -213,7 +213,9 @@ __host__ __device__ double problems::shekel(double* args, int n, int m, const do
 	return outer;
 }
 
-__constant__ const double sh_beta[] = { 0.1, 0.2, 0.2, 0.4, 0.4, 0.6, 0.3, 0.7, 0.5, 0.5 };
+__constant__ const double sh_beta[] = {
+	0.1, 0.2, 0.2, 0.4, 0.4, 0.6, 0.3, 0.7, 0.5, 0.5 
+};
 
 __constant__ const double sh_c[] = {
 	4.0, 1.0, 8.0, 6.0, 3.0, 2.0, 5.0, 8.0, 6.0, 7.0,
@@ -222,12 +224,12 @@ __constant__ const double sh_c[] = {
 	4.0, 1.0, 8.0, 6.0, 7.0, 9.0, 3.0, 1.0, 2.0, 3.6
 };
 
-__host__ __device__ double problems::shekel2(double* args, int n)
+__device__ double problems::gpu::shekel2(double* args, int n)
 {
-	return problems::shekel(args, n, 10, sh_beta, sh_c);
+	return problems::gpu::shekel(args, n, 10, sh_beta, sh_c);
 }
 
-__host__ __device__ double problems::styblinsky_tang(double* args, int n)
+__device__ double problems::gpu::styblinsky_tang(double* args, int n)
 {
 	double result = 0;
 	for(int i = 0; i < n; i++)
