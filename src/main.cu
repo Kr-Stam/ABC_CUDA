@@ -11,7 +11,8 @@
 #include "abc_cpu.h"
 #include "abc_gpu.cuh"
 #include "problems/problems.h"
-//#include "problems/cpu/problems_many_local_minima.h"
+#include "problems/cpu/problems_many_local_minima.h"
+#include "problems/cpu/problems_valley_shaped.h"
 #include "problems/gpu/problems_many_local_minima.cuh"
 #include "utils/array.hpp"
 
@@ -94,7 +95,7 @@ void abc_cpu_test(
 
 #define DIMENSIONS 2
 
-int main()
+void abc_gpu_test()
 {
 	double upper_bound[] = {+10, +10};
 	double lower_bound[] = {-10, -10};
@@ -111,7 +112,7 @@ int main()
 	//);
 
 	//variable initialization
-	int num_of_bees     =  1024;
+	int num_of_bees     = 1024;
 	int max_generations = 10000;
   	int max_trials      =    20;
 
@@ -143,6 +144,22 @@ int main()
 			values[i]
 		);
 	}
+}
+
+int main()
+{
+	//double lower_bounds[] = {-10, -10};
+	//double upper_bounds[] = { 10,  10};
+	//abc_cpu_test<2>(
+	//	10000,
+	//	problems::cpu::rosenbrock,
+	//	lower_bounds,
+	//	upper_bounds,
+	//	100,
+	//	10,
+	//	0.2
+	//);
+	abc_gpu_test();
 
 	return 0;
 }

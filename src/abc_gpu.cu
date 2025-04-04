@@ -293,7 +293,8 @@ __device__ void create_roulette_wheel(
 
 	__syncthreads();
 
-	roulette[threadIdx.x] = (shmem_max[0] - values[threadIdx.x]) / shmem_sum[0];
+	roulette[threadIdx.x] = (shmem_max[0] - values[threadIdx.x]) /
+	                        (blockDim.x*shmem_max[0] - shmem_sum[0]);
 
 	__syncthreads();
 }

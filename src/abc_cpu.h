@@ -108,44 +108,42 @@ namespace cpu
 	 * */
 	template<unsigned int dimensions>
 	void inline local_optimization(
-			Bee*     bee,
-			opt_func function,
-			double   lower_bounds[],
-			double   upper_bounds[]
+			std::vector<Bee>* bees,
+			int               num_of_bees,
+			opt_func          function,
+			double            lower_bounds[],
+			double            upper_bounds[]
 	)
 	{
-		Bee tmp = (*bee);
-
-		//TODO: Ova e greshno i mora da go smenam
-		#pragma unroll
-		for(int dim = 0; dim < dimensions; dim++)
+		Bee tmp_bee;
+		for(int i = 0; i < num_of_bees; i++)
 		{
-			double step = 
-				utils::random::rand_bounded_double(
-					lower_bounds[dim] / 10,
-					upper_bounds[dim] / 10
-				);
-
-			tmp.coordinates[dim] += step;
-
-			tmp.coordinates[dim] = 
-				utils::fast_clip(
-					tmp.coordinates[dim],
-					lower_bounds[dim],
-					upper_bounds[dim]
-				);
-		}
-
-		tmp.value = function(tmp.coordinates, dimensions);
-
-		if(tmp.value < (*bee).value)
-		{
-			(*bee) = tmp;
-			(*bee).trials = 0;
-		}
-		else
-		{
-			(*bee).trials++;
+			int	choice  = utils::random::rand_bounded_int(0, num_of_bees);
+			double step = utils::random::rand_bounded_double(0, 1);
+			#pragma unroll
+			for(int dim = 0; dim < dimensions; dim++)
+			{
+				tmp_bee.coordinates[dim] = 
+					utils::fast_clip(
+						(*bees)[i].coordinates[dim] + 
+						step * (
+							(*bees)[choice].coordinates[dim] +
+							(*bees)[choice].coordinates[dim]
+						),
+						lower_bounds[dim],
+						upper_bounds[dim]
+					);
+			}
+			tmp_bee.value = function(tmp_bee.coordinates, dimensions);
+			if(tmp_bee.value < (*bees)[i].value)
+			{
+				(*bees)[i] = tmp_bee;
+				(*bees)[i].trials = 0;
+			}
+			else
+			{
+				(*bees)[i].trials++;
+			}
 		}
 	}
 
@@ -301,19 +299,16 @@ namespace cpu
 		for(int i = 0; i < max_generations; i++)
 		{
 			//----------------EMPLOYED-BEE-LOCAL-OPTIMIZATION-----------------//
-			for(int bee_idx = 0; bee_idx < num_of_bees; bee_idx++)
-			{
-				local_optimization<dimensions>(
-					&(*bees)[bee_idx], 
-					function, 
-					lower_bounds,
-					upper_bounds
-				);
-			}
+			local_optimization<dimensions>(
+				bees,
+				num_of_bees,
+				function, 
+				lower_bounds,
+				upper_bounds
+			);
 			//----------------------------------------------------------------//
 
 			//----------------ONLOOKER-BEE-GLOBAL-OPTIMIZATION----------------//
-			
 			//Vo ovaa implementacija na selekcija mora da se 
 			//sortiraat rezultatite
 			
