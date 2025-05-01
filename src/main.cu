@@ -18,9 +18,11 @@
 
 //kje mora da gi izvadam kako vrednosti posle
 
-template<unsigned int dimensions>
+template<
+	unsigned int dimensions,
+	unsigned int bees_count
+>
 void abc_cpu_test(
-	int      num_of_bees,
 	opt_func optimization_function,
 	double   lower_bound[],
 	double   upper_bound[],
@@ -29,11 +31,11 @@ void abc_cpu_test(
 	double   scout_ratio
 )
 {
-	std::vector<cpu::Bee> bees(num_of_bees);
+	std::vector<cpu::Bee> bees(bees_count);
 
 	cpu::init_bees<dimensions>(
 		&bees,
-		num_of_bees,
+		bees_count,
 		optimization_function,
 		lower_bound,
 		upper_bound
@@ -48,9 +50,8 @@ void abc_cpu_test(
 	int step = iterations / num_of_steps;
 	for(int i = 0; i < num_of_steps; i++)
 	{
-		cpu::abc<dimensions>(
+		cpu::abc<dimensions, bees_count>(
 			&bees,
-			num_of_bees,
 			step,
 			max_trials,
 			scout_ratio,
@@ -59,7 +60,7 @@ void abc_cpu_test(
 			upper_bound
 		);
 
-		cpu::Bee min_bee = cpu::min_bee(&bees, num_of_bees);
+		cpu::Bee min_bee = cpu::min_bee(&bees, bees_count);
 		printf("Iteration #%03d: ", i*step);
 
 		for(int j = 0; j <= dimensions; j++)
@@ -73,11 +74,13 @@ void abc_cpu_test(
 
 	//ova debagiranje isto taka sakam da go smenam da e
 	//pogenerichno
-	std::vector<double> coordinates_x(num_of_bees);
-	std::vector<double> coordinates_y(num_of_bees);
+	std::vector<double> coordinates_x(bees_count);
+	std::vector<double> coordinates_y(bees_count);
 	//std::vector<double> values(num_of_bees);
-	double values[num_of_bees];
-	for(int bee_idx = 0; bee_idx < num_of_bees; bee_idx++)
+	//
+	std::sort(bees.begin(), bees.end(), cpu::BeeCompare);
+	double values[bees_count];
+	for(int bee_idx = 0; bee_idx < bees_count; bee_idx++)
 	{
 		coordinates_x[bee_idx] = bees[bee_idx].coordinates[0];
 		coordinates_y[bee_idx] = bees[bee_idx].coordinates[1];
@@ -86,10 +89,12 @@ void abc_cpu_test(
 	utils::array::print_array_double(values, 10);
 	for(int bee_idx = 0; bee_idx < 10; bee_idx++)
 	{
-		printf("x: %.2f y: %.2f value: %.2f\n", 
-				bees[bee_idx].coordinates[0],
-				bees[bee_idx].coordinates[1],
-				bees[bee_idx].value);
+		printf(
+			"x: %.2f y: %.2f value: %.2f\n",
+			bees[bee_idx].coordinates[0],
+			bees[bee_idx].coordinates[1],
+			bees[bee_idx].value
+		);
 	}
 }
 
@@ -123,15 +128,15 @@ void abc_gpu_test()
 		num_of_bees * sizeof(double)
 	);
 	gpu::launch_abc(
-			coordinates,
-			values,
-			num_of_bees,
-			max_generations,
-			max_trials,
-			optimization_function,
-			lower_bound,
-			upper_bound,
-			10
+		coordinates,
+		values,
+		num_of_bees,
+		max_generations,
+		max_trials,
+		optimization_function,
+		lower_bound,
+		upper_bound,
+		10
 	);
 
 	for(int i = 0; i < num_of_bees; i++)
@@ -148,18 +153,17 @@ void abc_gpu_test()
 
 int main()
 {
-	//double lower_bounds[] = {-10, -10};
-	//double upper_bounds[] = { 10,  10};
-	//abc_cpu_test<2>(
-	//	10000,
-	//	problems::cpu::rosenbrock,
-	//	lower_bounds,
-	//	upper_bounds,
-	//	100,
-	//	10,
-	//	0.2
-	//);
-	abc_gpu_test();
+	double lower_bounds[] = {-10, -10};
+	double upper_bounds[] = { 10,  10};
+	abc_cpu_test<2, 10000>(
+		problems::cpu::rosenbrock,
+		lower_bounds,
+		upper_bounds,
+		100,
+		10,
+		0.2
+	);
+	//abc_gpu_test();
 
 	return 0;
 }
