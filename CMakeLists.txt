@@ -68,8 +68,8 @@ set(CMAKE_BUILD_TYPE Debug)
 
 add_executable(
 	${CMAKE_PROJECT_NAME} 
-	${SOURCE_FILES_CPP} ${HEADER_FILES_HPP} 
-	${SOURCE_FILES_CU}  ${HEADER_FILES_CUH}
+	#${SOURCE_FILES_CPP} ${HEADER_FILES_HPP} 
+	#${SOURCE_FILES_CU}  ${HEADER_FILES_CUH}
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/utils/array.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/utils/sort.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/utils/random.cpp"
@@ -94,11 +94,11 @@ add_executable(
 	)
 
 # turn off matplotplusplus
-# target_link_libraries( 
-# 	"${CMAKE_PROJECT_NAME}"
-# 	#PUBLIC matplot
-# 	Matplot++::matplot
-# )
+#target_link_libraries( 
+#	"${CMAKE_PROJECT_NAME}"
+#	#PUBLIC matplot
+#	Matplot++::matplot
+#)
 
 target_compile_options(${CMAKE_PROJECT_NAME}
     PRIVATE $<$<COMPILE_LANGUAGE:CXX>: >

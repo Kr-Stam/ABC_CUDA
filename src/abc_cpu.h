@@ -14,6 +14,7 @@
 
 #include "problems/problems.h"
 #include "utils/utils.hpp"
+#include "rank_array.h"
 #include <vector>
 #include <algorithm>
 #include <math.h>
@@ -254,56 +255,7 @@ namespace cpu
 			);
 		}
 	}
-	/**
-	 * @brief Initializes an array of weights for rank selection
-	 * @param[out] arr Array of at least size n
-	 * @param[in]  n   Number of candidates
-	 * @return The sum of all elements of the initialized array
-	 *
-	 * @note Even though this function initializes weights by rank,
-	 *        it does not use the standard rank selection algorithm
-	 * */
-	template<unsigned int n>
-	float init_rank_arr_custom(float* arr)
-	{
-		int sum = n * (n + 1) / 2;
 
-		arr[0] = (float) n / (float) sum;
-
-		#pragma unroll
-		for(int i = 1; i < n; i++) 
-		{
-			arr[i] = arr[i - 1] + (float) (n - i) / (float) sum;
-		}
-
-		return (float) sum;
-	}
-
-	/**
-	 * @brief Initializes an array of weights for rank selection
-	 * @param[out] arr Array of at least size n
-	 * @param[in]  n   Number of candidates
-	 * @return The sum of all elements of the initialized array
-	 *
-	 * @note Even though this function initializes weights by rank,
-	 *        it does not use the standard rank selection algorithm
-	 * */
-	template<unsigned int n>
-	float init_rank_arr_custom_exponential(float* arr, float c)
-	{
-		//sumata e (c^(n+1) - 1) / (c - 1)
-		float sum = (pow(c, n + 1) - 1) / (c - 1);
-
-		arr[0] = 1 / sum;
-
-		#pragma unroll
-		for(int i = 1; i < n; i++) 
-		{
-			arr[i] = arr[i - 1] + pow(c, i) / sum;
-		}
-
-		return (float) sum;
-	}
 
 	//1 + 2 + 3 + 4 + 5
 	//i + i + 1 + ...
@@ -315,71 +267,6 @@ namespace cpu
 	//
 	//n * i + (1c + 2c + ...)
 	// sum(1/pow(a, i))
-
-	//bazirano na:
-	//An Analysis of Linear Ranking and Binary Tournament Selection in
-	//Genetic Algorithms shto e bazirano na ova:
-	//Adaptive Selection Methods for Genetic Algorithms 
-	//James Edward Baker 
-	//Computer Science Department 
-	//Vanderbilt University 
-	//according to the paper the most ideal value of max is 1.1
-	/**
-	 * @brief Initializes an array of weights for linear rank selection
-	 * @param[out] arr Array of at least size n
-	 * @param[in]  a   Must be less than 2.0
-	 * @param[in]  n   Number of candidates
-	 *
-	 * @return The sum of all elements of the initialized array
-	 *
-	 * @note According to cited reasearch the ideal value of a is 1.1
-	 * */
-	template<unsigned int n>
-	float init_rank_arr_linear(
-		float* arr_out,
-		float  a 
-	)
-	{
-		if(a > 2 || n < 1) return 0;
-
-		float b = 2 - a;
-
-		float c = 1.0 / n * (b + (a - b));
-		arr_out[0] = c;
-		#pragma unroll
-		for(int i = 1; i < n; i++)
-		{
-			c = 1.0 / n * (b + (a - b) * (n - i - 1.0) / (n - 1.0));
-			arr_out[i] = arr_out[i - 1] + c;
-		}
-
-		return arr_out[n - 1];
-	}
-
-	template<unsigned int n>
-	float init_rank_arr_exponential(
-		float* arr_out,
-		float  c
-	)
-	{
-		if(n < 1) return 0;
-
-		float c_min_1     = 1 - c;
-		float c_nth_min_i = pow(c, n - 1);
-		float c_nth_min_1 = 1 - pow(c, n);
-
-		arr_out[0] = c_nth_min_1  * c_min_1 / c_nth_min_1;
-
-		#pragma unroll
-		for(int i = 0; i < n; i++)
-		{
-			c_nth_min_i = c_nth_min_i / c;
-			float tmp   = c_nth_min_i  * c_min_1 / c_nth_min_1; 
-			arr_out[i]  = arr_out[i - 1] + tmp;
-		}
-
-		return arr_out[n - 1];
-	}
 
 	template<unsigned int n>
 	int rank_selection(
@@ -397,97 +284,20 @@ namespace cpu
 		return n;
 	}
 
-	//? ne sum siguren za ova
 	template<unsigned int n>
-	int rank_selection_optimized_custom()
+	int rank_selection(
+		std::array<float, n> arr_ranks
+	)
 	{
-		//ideata pozadi ova e vo O(1) vreme da se odredi izborot
-		//pretpostavuvajki serija od 1, 2, 3, ..., n
-		//(in + i^2) / (n^2 + n) >= f
-
-		//ovde selekcijata e O(1), ama sepak problem e shto mora
-		//da se sortira
 		float choice = utils::random::rand_bounded_double(0, 1);
-		static float nf = [](){
-			return (float) n;
-		}();
-		static float nf_2_min_nf = [](){
-			return nf * nf - nf;
-		}();
+		float sum    = 0;
 
-		float i = (-1 + sqrt(1 + 4 * choice * nf_2_min_nf)) / 2;
-		return (int) ceilf(i);
-	}
-	
-
-	//? ne sum siguren za ova
-	template<
-		unsigned int n,
-		unsigned int c_num,
-		unsigned int c_div
-	>
-	int rank_selection_exponential_optimized_custom()
-	{
-		//sumata e (c^(n+1) - 1) / (c - 1)
-		//da se reshi za n preku a (choice) pa se dobiva kraen rezultat:
-		//x = (log((1 - c) (1/(1 - c) - a)) - log(c))/log(c)
-		//x = log(a (c - 1) + 1)/log(c) - 1
-
-		//ovde selekcijata e O(1), ama sepak problem e shto mora
-		//da se sortira
-		static float c = [](){
-			return (float) c_num / (float) c_div;
-		}();
-		static float sum = [](){
-			
-			return (pow(c, (n + 1)) - 1) / (c - 1);
-		}();
-		static float ln_c = [](){
-			return log(c);
-		}();
-
-		float choice = utils::random::rand_bounded_double(0, 1);
-		choice *= (float) sum;
-
-		float i = log(choice*(c - 1) + 1) / ln_c - 1;
-		return (int) ceilf(i);
-	}
-
-
-	//? ako se presmeta sumata pred toa gornoto bi trebalo da e pobrzo
-	//? deka tuka treba da se presmeta pow ciklichno
-	template<
-		unsigned int n,
-		unsigned int c_num,
-		unsigned int c_div
-	>
-	int rank_selection_exponential_optimized_custom_2()
-	{
-		//sumata e (c^(n+1) - 1) / (c - 1)
-		//se reshava sumata do sega preku celata suma so formula
-		//(c^(x + 1) - 1)/(c^(n + 1) - 1) = a
-		//resheno za x ova e 
-		//x = (log((1 - c^(n + 1)) (1/(1 - c^(n + 1)) - a)) - log(c))/log(c)
-		//x = log(a (c^(n + 1) - 1) + 1)/log(c) - 1
-
-		//ovde selekcijata e O(1), ama sepak problem e shto mora
-		//da se sortira
-
-		//precompute static vars to be faster
-		static float c = []() {
-			return (float) c_num / (float) c_div;
-		}();
-		static float ln_c = []() {
-			return log(c);
-		}();
-		static float pow_c_min_one = []() {
-			return pow(c, n + 1) - 1.0f;
-		}();
-
-		float choice = utils::random::rand_bounded_double(0, 1);
-		float i = log(choice * pow_c_min_one + 1) / ln_c - 1;
-
-		return (int) ceilf(i);
+		for(int i = 0; i < n; i++)
+		{
+			sum += arr_ranks[i];
+			if(sum >= choice) return i;
+		}
+		return n;
 	}
 
 	//ova dodava i povekje krugovi na selekcija
@@ -579,7 +389,8 @@ namespace cpu
 	 */
 	template<
 		unsigned int dimensions,
-		unsigned int bees_count //TODO: ova kje mora posle da go usoglasam i da go izmeram na dve nachini
+		unsigned int bees_count //TODO: ova kje mora posle da go
+								//usoglasam i da go izmeram na dve nachini
 	>
 	void abc(
 		std::vector<Bee>*  bees,
@@ -595,11 +406,16 @@ namespace cpu
 		std::vector<double> roulette(scouts_count);
 
 		//rank selection
-		float* rank_arr = (float*) malloc(bees_count * sizeof(float));
+		//float* rank_arr = (float*) malloc(bees_count * sizeof(float));
 		//init_rank_arr_linear<bees_count>(rank_arr, 1.1f);
 		//init_rank_arr_exponential<bees_count>(rank_arr, 1.1f);
 		//init_rank_arr_custom<bees_count>(rank_arr);
 		//init_rank_arr_custom_exponential<bees_count>(rank_arr, 0.5);
+		std::array<float, bees_count> rank_arr = 
+			//rank_arr::rank_arr_exponential<bees_count, 110, 100>();
+			//rank_arr::rank_arr_linear<bees_count, 190, 100>();
+			//rank_arr::rank_arr_simple<bees_count>();
+			rank_arr::rank_arr_simple_exponential<bees_count, 50, 100>();
 		//-----------------------MAIN-LOOP---------------------------//
 		for(int i = 0; i < max_generations; i++)
 		{
@@ -660,15 +476,15 @@ namespace cpu
 			//}
 
 			//------------------rank-selection-------------------//
-			//std::sort(
-			//	(*bees).begin(),
-			//	(*bees).end(),
-			//	BeeCompare
-			//);
+			std::sort(
+				(*bees).begin(),
+				(*bees).end(),
+				BeeCompare
+			);
 
 			for(int idx = 0; idx < bees_count; idx++)
 			{
-				//int choice = rank_selection<bees_count>(rank_arr);
+				int choice = rank_selection<bees_count>(rank_arr);
 				//int choice = rank_selection_optimized_custom<bees_count>();
 				//int choice = rank_selection_exponential_optimized_custom<bees_count, 5, 10>();
 				//int choice = rank_selection_exponential_optimized_custom_2<bees_count, 5, 10>();
@@ -677,7 +493,7 @@ namespace cpu
 				//! ispagja deka ne e soodvetno poradi toa
 				//! shto ne konvergira kako shto treba
 				//int choice = tournament_selection<bees_count / 10>(bees);
-				int choice = custom_tournament_selection<bees_count / 10, 3>(bees);
+				//int choice = custom_tournament_selection<bees_count / 10, 3>(bees);
 
 				if((*bees)[idx].value > (*bees)[choice].value)
 				{

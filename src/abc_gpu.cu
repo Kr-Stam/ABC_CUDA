@@ -332,6 +332,45 @@ __device__ int spin_roulette(
 	return 0;
 }
 
+template<unsigned int dimensions>
+__device__ void sort_bees(
+	double* coordinates,
+	double* values,
+	double* shmem_values,
+	double* shmem_indexes,
+	int     num_of_bees
+)
+{
+	int tid = blockIdx.x * blockDim.x + threadIdx.x;
+
+	shmem_values[threadIdx.x] = values[tid];
+
+	for(int size = 2; size < num_of_bees; size <<= 2)
+	{
+		for(int stride = size >> 1; stride > 0; stride >>= 1) 
+		{
+			int pos = (tid << 1) - (tid && (stride - 1));
+			if(pos + stride < num_of_bees)
+			{
+				bool ascending = (tid & (size >> 1)) == 0;
+				double a = shmem_values[tid];
+				double b = shmem_values[tid + stride];
+
+				if((a > b) == ascending)
+				{
+					shmem_values[tid]        = b;
+					shmem_values[tid+stride] = a;
+
+					shmem_indexes[tid]         = b;
+					shmem_indexes[tid+stride ] = a;
+				}
+			}
+			__syncthreads();
+		}
+
+	}
+}
+
 /**
  * @brief Optimized parallel GPU version of the ABC algorithm
  *
