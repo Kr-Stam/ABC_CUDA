@@ -4,24 +4,24 @@
 namespace problems::cpu
 {
 	///\note This is only a 2d function
-	double bohachevsky1(double* args, int n);
+	float bohachevsky1(float* args, int n);
 
 	///\note This is only a 2d function
-	double bohachevsky2(double* args, int n);
+	float bohachevsky2(float* args, int n);
 
 	///\note This is only a 2d function
-	double bohachevsky3(double* args, int n);
+	float bohachevsky3(float* args, int n);
 
-	double sphere(double* args, int n);
+	float sphere(float* args, int n);
 
-	double perm(double* args, int n, int b);
-	double perm2(double* args, int n);
+	float perm(float* args, int n, int b);
+	float perm2(float* args, int n);
 
-	double rotated_hyper_elipsoid(double* args, int n);
+	float rotated_hyper_elipsoid(float* args, int n);
 
-	double sum_of_different_powers(double* args, int n);
+	float sum_of_different_powers(float* args, int n);
 
-	double sum_squares(double* args, int n);
+	float sum_squares(float* args, int n);
 	
-	double trid(double* args, int n);
+	float trid(float* args, int n);
 };

@@ -8,34 +8,38 @@
  *       because they were templated in order to optimize performance for     *
  *       each dimension size                                                  *
  * @author Kristijan Stameski                                                 *
- ******************************************************************************/
+ *****************************************************************************/
 
 #pragma once
 
 #include "problems/problems.h"
 #include "utils/utils.hpp"
-#include "rank_array.h"
+#include "rank_array.cuh"
+#include "abc_main.cuh"
 #include <vector>
 #include <algorithm>
 #include <math.h>
 
 namespace cpu
 {
-	/**
+	using namespace abc_shared;
+
+	/*
 	 * @brief A struct representing an individual Bee
-	 * @details Each bee has a solution/food source it is working on,
-	 *          this solution has certain coordinates in the problem space
-	 *          and has a certain fitness value. An internal variable
-	 *          representing the number of trials is retained across 
-	 *          itertation in order to explore the viability of the solution.
-	 *          If the solution cannot be improved after a certain number
-	 *          of trial attempts then the solution is abandoned
-	 * */
+	 * @details
+	 * Each bee has a solution/food source it is working on,
+	 * this solution has certain coordinates in the problem space
+	 * and has a certain fitness value. An internal variable
+	 * representing the number of trials is retained across 
+	 * itertation in order to explore the viability of the solution.
+	 * If the solution cannot be improved after a certain number
+	 * of trial attempts then the solution is abandoned
+	 */
 	typedef struct
 	{
-		double coordinates[2];
-		double value;
-		int    trials;
+		float coordinates[2];
+		float value;
+		int   trials;
 	} Bee;
 
 	///@brief comparator for sorting Bees
@@ -62,11 +66,11 @@ namespace cpu
 	)
 	{
 		Bee minimum = (*bees)[0];
+
 		for(int idx = 1; idx < bees_count; idx++)
-		{
 			if(minimum.value > (*bees)[idx].value)
 				minimum = (*bees)[idx];
-		}
+
 		return minimum;
 	}
 
@@ -77,19 +81,19 @@ namespace cpu
 	 * @param[in]  lower_bounds
 	 * @param[in]  upper_bounds
 	 * */
-	template<unsigned int dimensions>
+	template<uint32_t dimensions>
 	void inline generate_random_solution(
 		Bee*     bee,
 		opt_func function,
-		double   lower_bounds[],
-		double   upper_bounds[]
+		float    lower_bounds[],
+		float    upper_bounds[]
 	)
 	{
 		#pragma unroll
 		for(int dim = 0; dim < dimensions; dim++)
 		{
 			(*bee).coordinates[dim] = 
-				utils::random::rand_bounded_double(
+				utils::random::rand_bounded_float(
 				lower_bounds[dim],
 				upper_bounds[dim]
 			);
@@ -108,20 +112,20 @@ namespace cpu
 	 * @details Randomly select another bee and merge the solutions with
 	 *          a stochastic step
 	 * */
-	template<unsigned int dimensions>
+	template<uint32_t dimensions, uint32_t bees_count>
 	void inline local_optimization(
-			std::vector<Bee>* bees,
-			int               bees_count,
-			opt_func          function,
-			double            lower_bounds[],
-			double            upper_bounds[]
+		std::vector<Bee>* bees,
+		opt_func          function,
+		float             lower_bounds[],
+		float             upper_bounds[]
 	)
 	{
 		Bee tmp_bee;
 		for(int i = 0; i < bees_count; i++)
 		{
 			int  choice = utils::random::rand_bounded_int(0, bees_count);
-			double step = utils::random::rand_bounded_double(0, 1);
+			float step  = utils::random::rand_bounded_float(0, 1);
+
 			#pragma unroll
 			for(int dim = 0; dim < dimensions; dim++)
 			{
@@ -149,9 +153,7 @@ namespace cpu
 		}
 	}
 
-	//TODO: Treba da se napravi posebna verzija za drugi tipovi na selekcija
-
-	/**
+	/*
 	 * @brief Creates a roulette wheel with a cumulative distribution over 
 	 *        the first num_of_candidates bees
 	 *
@@ -162,35 +164,38 @@ namespace cpu
 	 * @note This roulette wheel is not sorted, if you want to select 
 	 *       the top/best num_of_candidates bees then the Bee pointers
 	 *       must be sorted beforehand
-	 * */
+	 */
+	template<uint32_t size>
 	inline void create_roulette_wheel(
-		std::vector<Bee>*    bees,
-		std::vector<double>* roulette,
-		int num_of_candidates,
-		int total_num
+		std::vector<Bee>*       bees,
+		std::array<float, size> roulette
 	)
 	{
-		//sum reduction
-		double sum = 0;
+		float sum = roulette[0];
+		float max = roulette[0];
 		#pragma unroll
-		for(int idx = 0; idx < num_of_candidates; idx++)
+		for(int idx = 1; idx < size; idx++)
 		{
-			//? ne znam dali ova e najpametnata opcija deka vo
-			//? gpu delot go pravam na razlichen nachin
-			
 			// the inverse is used in order to select for the 
 			// global minimum
-			(*roulette)[idx] = 1.00 / (*bees)[idx].value;
-			sum += (*roulette)[idx];
+			//roulette[idx] = 1.00 / (*bees)[idx].value;
+			roulette[idx] = (*bees)[idx].value;
+			sum += roulette[idx];
+			max = roulette[idx] > max ? roulette[idx] : max;
 		}
 
 		//cumulative distribution
-		(*roulette)[0] = (*roulette)[0] / sum;
+		sum = max * size - sum;
+		roulette[0] = roulette[0] / sum;
 		#pragma unroll
-		for(int idx = 1; idx < num_of_candidates; idx++)
+		for(int idx = 1; idx < size; idx++)
 		{
-			(*roulette)[idx] = (*roulette)[idx] / sum +
-			                   (*roulette)[idx - 1];
+			roulette[idx] = (max - roulette[idx]) / sum + roulette[idx - 1];
+			if(roulette[idx] < 0)
+			{
+				roulette[idx] = 1;
+				break;
+			}
 		}
 	}
 
@@ -198,19 +203,19 @@ namespace cpu
 	 * @brief Selects a random item from a roulette wheel according to
 	 *        weighted roulette wheel selection
 	 *
-	 * @param[in] roulette A vector of doubles containing a cumulative
+	 * @param[in] roulette A vector of floats containing a cumulative
 	 *            probabilty distribution
 	 *
 	 * @warning This function expects a cumulative distribution, all items
 	 *          of the roulette should sum up to 1.0
 	 * */
-	inline int spin_roulette(
-			std::vector<double> roulette
-	)
+	template<uint32_t size>
+	inline int spin_roulette(std::array<float, size> roulette)
 	{
-		double choice = utils::random::rand_bounded_double(0, 1);
+		float choice = utils::random::rand_bounded_float(0, 1);
 
-		for(int idx = 0; idx < roulette.size(); idx++)
+		#pragma unroll
+		for(int idx = 0; idx < size; idx++)
 			if(choice <= roulette[idx]) return idx;
 		
 		return 0;
@@ -231,13 +236,13 @@ namespace cpu
 	 *       separated into steps or batches. This was done for benchmarking
 	 *       purposes
 	 * */
-	template<unsigned int dimensions>
+	template<uint32_t dimensions>
 	void init_bees(
-			std::vector<Bee>* bees,
-			int               bees_count,
-			opt_func          function,
-			double            lower_bounds[],
-			double            upper_bounds[]
+		std::vector<Bee>* bees,
+		int               bees_count,
+		opt_func          function,
+		float             lower_bounds[],
+		float             upper_bounds[]
 	)
 	{
 		utils::random::seed_random();
@@ -268,44 +273,33 @@ namespace cpu
 	//n * i + (1c + 2c + ...)
 	// sum(1/pow(a, i))
 
-	template<unsigned int n>
-	int rank_selection(
-		float* arr_ranks
-	)
+	template<uint32_t n>
+	int rank_selection_arr(float* arr_ranks, float rand)
 	{
-		float choice = utils::random::rand_bounded_double(0, 1);
-		float sum    = 0;
+		for(int idx = 0; idx < n; idx++)
+			if(rand <= arr_ranks[idx]) return idx;
 
-		for(int i = 0; i < n; i++)
-		{
-			sum += arr_ranks[i];
-			if(sum >= choice) return i;
-		}
-		return n;
+		return 0;
 	}
 
-	template<unsigned int n>
-	int rank_selection(
-		std::array<float, n> arr_ranks
-	)
+	template<uint32_t n>
+	int rank_selection_arr(std::array<float, n> arr_ranks, float rand)
 	{
-		float choice = utils::random::rand_bounded_double(0, 1);
-		float sum    = 0;
+		for(int idx = 0; idx < n; idx++)
+			if(rand <= arr_ranks[idx]) return idx;
 
-		for(int i = 0; i < n; i++)
-		{
-			sum += arr_ranks[i];
-			if(sum >= choice) return i;
-		}
-		return n;
+		return 0;
 	}
 
 	//ova dodava i povekje krugovi na selekcija
-	template<unsigned int num_of_contestants, unsigned int num_of_games>
+	template<
+		uint32_t num_of_contestants,
+		uint32_t num_of_games
+	>
 	int custom_tournament_selection(std::vector<Bee>* bees)
 	{
-		int max_idx   = 0;
-		int max_value = (*bees)[max_idx].value;
+		int    max_idx   = 0;
+		float max_value = (*bees)[max_idx].value;
 		for(int i = 0; i < num_of_games; i++)
 		{
 			int choices[num_of_contestants];
@@ -330,12 +324,10 @@ namespace cpu
 		return max_idx;
 	}
 
-	template<unsigned int tournament_size>
+	//! ova treba da bide staveno vo poseben file
+	template<uint32_t tournament_size>
 	int tournament_selection(std::vector<Bee>* bees)
 	{
-		int max_idx = 0;
-		float max_value = (*bees)[max_idx].value;
-
 		int choices[tournament_size];
 
 		#pragma unroll
@@ -343,9 +335,12 @@ namespace cpu
 		{
 			choices[j] = utils::random::rand_bounded_int(
 				0,
-				( *bees).size() - 1
+				(*bees).size() - 1
 			);
 		}
+
+		int max_idx = 0;
+		float max_value = (*bees)[choices[0]].value;
 
 		#pragma unroll
 		for(int j = 1; j < tournament_size; j++)
@@ -381,48 +376,66 @@ namespace cpu
 	 *                           potential candidates, if set to 0.2 only
 	 *                           the top 20% are considered.
 	 * @param function[in]       pointer to a function to be optimized of
-	 *                           the type: (array(double), int) -> double
+	 *                           the type: (array(float), int) -> float
 	 * @param lower_bounds[in] The lower bounds for the search space
 	 * @param upper_bounds[in] The upper bounds for the search space
 	 *
 	 * @return void
 	 */
 	template<
-		unsigned int dimensions,
-		unsigned int bees_count //TODO: ova kje mora posle da go
-								//usoglasam i da go izmeram na dve nachini
+		uint32_t  dimensions,
+		uint32_t  bees_count,
+		uint32_t  scouts_count,
+		uint32_t  trials_limit, 
+		bool      inverse,
+		Selection selection_type,
+		Roulette  roulette_type,
+		Rank      rank_type,
+		Tourn     tournament_type
 	>
 	void abc(
-		std::vector<Bee>*  bees,
-		int                max_generations, 
-		int                trials_limit, 
-		double             scouts_ratio,
-		opt_func           function,
-		double             lower_bounds[],
-		double             upper_bounds[]
+		std::vector<Bee>* bees,
+		int               max_generations, 
+		opt_func          function,
+		float             lower_bounds[],
+		float             upper_bounds[]
 	)
 	{
-		int scouts_count = (int) (((double) bees_count) * scouts_ratio);
-		std::vector<double> roulette(scouts_count);
+		//constexpr int roulette_size = (scouts_count + 200) * (1 && selection_type == ROULETTE_WHEEL);
+		constexpr int roulette_size = scouts_count * (1 && selection_type == ROULETTE_WHEEL);
+		std::array<float, roulette_size> roulette;
+		std::array<float, bees_count>   rank_arr;
 
-		//rank selection
-		//float* rank_arr = (float*) malloc(bees_count * sizeof(float));
-		//init_rank_arr_linear<bees_count>(rank_arr, 1.1f);
-		//init_rank_arr_exponential<bees_count>(rank_arr, 1.1f);
-		//init_rank_arr_custom<bees_count>(rank_arr);
-		//init_rank_arr_custom_exponential<bees_count>(rank_arr, 0.5);
-		std::array<float, bees_count> rank_arr = 
-			//rank_arr::rank_arr_exponential<bees_count, 110, 100>();
-			//rank_arr::rank_arr_linear<bees_count, 190, 100>();
-			//rank_arr::rank_arr_simple<bees_count>();
-			rank_arr::rank_arr_simple_exponential<bees_count, 50, 100>();
+		switch(selection_type)
+		{
+		case ROULETTE_WHEEL:
+			break;
+		case RANK:
+			switch(rank_type)
+			{
+			case LINEAR_ARRAY:
+				rank_arr = rank_arr::arr_lin<bees_count, 190, 100>();
+				break;
+			case EXPONENTIAL_ARRAY:
+				rank_arr = rank_arr::arr_exp<bees_count, 110, 100>();
+				break;
+			case LINEAR_SIMPLE_ARRAY:
+				rank_arr = rank_arr::arr_simple<bees_count>();
+				break;
+			case EXPONENTIAL_SIMPLE_ARRAY:
+				rank_arr = rank_arr::arr_simple_exp<bees_count, 50, 100>();
+				break;
+			}
+			break;
+		case TOURNAMENT:
+			break;
+		}
 		//-----------------------MAIN-LOOP---------------------------//
 		for(int i = 0; i < max_generations; i++)
 		{
 			//-----------EMPLOYED-BEE-LOCAL-OPTIMIZATION---------//
-			local_optimization<dimensions>(
+			local_optimization<dimensions, bees_count>(	
 				bees,
-				bees_count,
 				function, 
 				lower_bounds,
 				upper_bounds
@@ -430,71 +443,85 @@ namespace cpu
 			//---------------------------------------------------//
 
 			//--------ONLOOKER-BEE-GLOBAL-OPTIMIZATION-----------//
-			//Vo ovaa implementacija na selekcija mora da se 
-			//sortiraat rezultatite
 			
 			//-------------roulette wheel selection---------------//
-			//? se koristi std::partial_sort poradi toa shto nadvor
-			//? od opsegot beshe da napravam optimizirana 
-			//? implementacija na quicksort ili merge_sort 
-			//? specifichno za pcheli (voglavno poradi odlukata za
-			//? abstrakcija da bide prikazhano kako struktura i
-			//? problemi okolu chuvanje na pochetniot indeks)
-			//
-			// TODO: 
-			// Tuka mora da se pretstavat i alternativi na 
-			// ovaa selekcija
-			//std::partial_sort( (*bees).begin(),
-			//	(*bees).begin() + scouts_count,
-			//	(*bees).end(),
-			//	BeeCompare
-			//);
 			
-			///TODO: Dodadi i drugi tipovi na selekcija
-			////Roulette selection
-			////initialize roulette
-			//create_roulette_wheel(
-			//	&(bees),
-			//	&roulette,
-			//	scouts_count,
-			//	bees_count
-			//);
-			////do selection
-			//for(int idx = scouts_count; idx < bees_count; idx++)
-			//{
-			//	int spin = spin_roulette(roulette);
-			//	if((*bees)[idx].value > (*bees)[spin].value)
-			//	{
-			//		(*bees)[idx] = (*bees)[spin];
-			//		(*bees)[idx].trials = 0;
-			//	}
-			//	else
-			//	{
-			//		(*bees)[idx] = (*bees)[spin];
-			//		(*bees)[idx].trials++;
-			//	}
-			//}
-
-			//------------------rank-selection-------------------//
-			std::sort(
-				(*bees).begin(),
-				(*bees).end(),
-				BeeCompare
-			);
+			switch(selection_type)
+			{
+			case ROULETTE_WHEEL:
+				if(roulette_type == PARTIAL)
+				{
+					std::partial_sort(
+						(*bees).begin(),
+						(*bees).begin() + scouts_count,
+						(*bees).end(),
+						BeeCompare
+					);
+				}
+				create_roulette_wheel<roulette_size>(
+					bees,
+					roulette
+				);
+				break;
+			case RANK:
+				std::sort(
+					(*bees).begin(),
+					(*bees).end(),
+					BeeCompare
+				);
+				break;
+			}
 
 			for(int idx = 0; idx < bees_count; idx++)
 			{
-				int choice = rank_selection<bees_count>(rank_arr);
-				//int choice = rank_selection_optimized_custom<bees_count>();
-				//int choice = rank_selection_exponential_optimized_custom<bees_count, 5, 10>();
-				//int choice = rank_selection_exponential_optimized_custom_2<bees_count, 5, 10>();
+				int choice;
+				switch(selection_type)
+				{
+				case ROULETTE_WHEEL:
+					switch(roulette_type)
+					{
+					case FULL:
+					case PARTIAL:
+						choice = spin_roulette<roulette_size>(roulette);
+						break;
+					}
+					break;
+				case RANK:
+					float rand;
+					rand = utils::random::rand_bounded_float(0, 1);
+					switch(rank_type)
+					{
+					case LINEAR_ARRAY:
+					case EXPONENTIAL_ARRAY:
+					case LINEAR_SIMPLE_ARRAY:
+					case EXPONENTIAL_SIMPLE_ARRAY:
+						choice = rank_selection_arr<bees_count>(rank_arr, rand);
+						break;
+					case CONSTANT_LINEAR:
+						choice = rank_constant::lin<bees_count>(rand);
+						break;
+					case CONSTANT_EXPONENTIAL:
+						choice = rank_constant::exp<bees_count, 1, 20>(rand);
+						break;
+					case CONSTANT_EXPONENTIAL_2:
+						choice = rank_constant::exp2<bees_count, 1, 20>(rand);
+						break;
+					}
+					break;
+				case TOURNAMENT:
+					switch(tournament_type)
+					{
+					case SINGLE:
+						choice = tournament_selection<bees_count/10>(bees);
+						break;
+					case MULTIPLE:
+						choice = custom_tournament_selection<bees_count/10, 3>(bees);
+						break;
+					}
+					break;
+				}
 				
-				//! po grubi eksperimenti tournament selection
-				//! ispagja deka ne e soodvetno poradi toa
-				//! shto ne konvergira kako shto treba
-				//int choice = tournament_selection<bees_count / 10>(bees);
-				//int choice = custom_tournament_selection<bees_count / 10, 3>(bees);
-
+				if(choice < 0) choice = 0;
 				if((*bees)[idx].value > (*bees)[choice].value)
 				{
 					(*bees)[idx] = (*bees)[choice];

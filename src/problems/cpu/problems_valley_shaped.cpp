@@ -2,27 +2,27 @@
 #include "../problems.h"
 #include <math.h>
 
-double problems::cpu::three_hump_camel(double* args, int n)
+float problems::cpu::three_hump_camel(float* args, int n)
 {
-	double x2 = args[0]*args[0];
+	float x2 = args[0]*args[0];
 
 	return 2*x2 - 1.05*x2*x2 + x2*x2*x2/6.0 + args[0]*args[1] +
 	       args[1]*args[1];
 }
 
-double problems::cpu::six_hump_camel(double* args, int n)
+float problems::cpu::six_hump_camel(float* args, int n)
 {
-	double x2 = args[0]*args[0];
-	double y2 = args[1]*args[1];
+	float x2 = args[0]*args[0];
+	float y2 = args[1]*args[1];
 
 	return (4 - 2.1*x2 + x2*x2/3)*x2 + args[0]*args[1] +
 	       (-4 + 4*y2)*y2;
 }
 
-double problems::cpu::dixon_price(double* args, int n)
+float problems::cpu::dixon_price(float* args, int n)
 {
-	double result = 0;
-	double tmp = (args[0] - 1);
+	float result = 0;
+	float tmp = (args[0] - 1);
 	
 	result += tmp*tmp;
 	for(int i = 1; i < n; i++)
@@ -33,12 +33,12 @@ double problems::cpu::dixon_price(double* args, int n)
 	return result;
 }
 
-double problems::cpu::rosenbrock(double* args, int n)
+float problems::cpu::rosenbrock(float* args, int n)
 {
-	double result = 0;
+	float result = 0;
 	for(int i = 0; i < n - 1; i++)
 	{
-		double tmp;
+		float tmp;
 		tmp     = args[i+1] - args[i]*args[i];
 		result += 100*tmp*tmp;
 		tmp     = args[i] - 1;

@@ -9,6 +9,11 @@ namespace utils::array
 		int     n
 	);
 
+	void print_array_float(
+		float* arr,
+		int    n
+	);
+
 	void print_array_int(
 		int* arr,
 		int  n

@@ -4,16 +4,16 @@
 namespace problems::cpu
 {
 	///\note This is only a 2d function
-	double booth(double* args, int n);
+	float booth(float* args, int n);
 
 	///\note This is only a 2d function
-	double matyas(double* args, int n);
+	float matyas(float* args, int n);
 
 	///\note This is only a 2d function
-	double mccormick(double* args, int n);
+	float mccormick(float* args, int n);
 
-	double power_sum(double* args, int n, double* b);
-	double power_sum2(double* args, int n);
+	float power_sum(float* args, int n, float* b);
+	float power_sum2(float* args, int n);
 
-	double zakharov(double* args, int n);
+	float zakharov(float* args, int n);
 }

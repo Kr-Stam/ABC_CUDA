@@ -3,11 +3,11 @@
 
 namespace problems::cpu
 {
-	double dejong5(double* args, int n);
+	float dejong5(float* args, int n);
 
 	///\note This is only a 2d function
-	double easom(double* args, int n);
+	float easom(float* args, int n);
 
-	double michalewicz(double* args, int n, int m);
-	double michalewicz2(double* args, int n);
+	float michalewicz(float* args, int n, int m);
+	float michalewicz2(float* args, int n);
 }

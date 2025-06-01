@@ -5,24 +5,24 @@
 namespace problems::gpu
 {
 	///\note This is only a 2d function
-	__device__ double bohachevsky1(double* args, int n);
+	__device__ float bohachevsky1(float* args, int n);
 
 	///\note This is only a 2d function
-	__device__ double bohachevsky2(double* args, int n);
+	__device__ float bohachevsky2(float* args, int n);
 
 	///\note This is only a 2d function
-	__device__ double bohachevsky3(double* args, int n);
+	__device__ float bohachevsky3(float* args, int n);
 
-	__device__ double sphere(double* args, int n);
+	__device__ float sphere(float* args, int n);
 
-	__device__ double perm(double* args, int n, int b);
-	__device__ double perm2(double* args, int n);
+	__device__ float perm(float* args, int n, int b);
+	__device__ float perm2(float* args, int n);
 
-	__device__ double rotated_hyper_elipsoid(double* args, int n);
+	__device__ float rotated_hyper_elipsoid(float* args, int n);
 
-	__device__ double sum_of_different_powers(double* args, int n);
+	__device__ float sum_of_different_powers(float* args, int n);
 
-	__device__ double sum_squares(double* args, int n);
+	__device__ float sum_squares(float* args, int n);
 	
-	__device__ double trid(double* args, int n);
+	__device__ float trid(float* args, int n);
 };

@@ -5,36 +5,51 @@
 namespace problems::gpu
 {
 	///\note This is only a 2d function
-	__device__ double beale(double* args, int n);
+	__device__ float beale(float* args, int n);
 	
 	///\note This is only a 2d function
-	__device__ double branin(double* args, int n, double a, double b, double c, double r, double s, double t);
-	__device__ double branin2(double* args, int n);
+	__device__ float branin(
+		float* args,
+		int    n,
+		float  a,
+		float  b,
+		float  c,
+		float  r,
+		float  s,
+		float  t
+	);
+	__device__ float branin2(float* args, int n);
 
 	///\note This is only a 4d function
 	///\warning This function has not been tested
-	__device__ double colville(double* args, int n);
+	__device__ float colville(float* args, int n);
 
 	///\note This is only a 1d function
-	__device__ double forrester(double* args, int n);
+	__device__ float forrester(float* args, int n);
 
 	///\note This is only a 2d function
-	__device__ double goldstein_price(double* args, int n);
+	__device__ float goldstein_price(float* args, int n);
 
 	///\note All of the hartmann functions have not been tested
-	__device__ double hartmann3d(double* args, int n);
-	__device__ double hartmann4d(double* args, int n);
-	__device__ double hartmann6d(double* args, int n);
+	__device__ float hartmann3d(float* args, int n);
+	__device__ float hartmann4d(float* args, int n);
+	__device__ float hartmann6d(float* args, int n);
 
-	__device__ double permdb (double* args, int n, double b);
-	__device__ double permdb2 (double* args, int n);
+	__device__ float permdb (float* args, int n, float b);
+	__device__ float permdb2 (float* args, int n);
 
 	///\note This function requires at least a 4d input
-	__device__ double powell(double* args, int n);
+	__device__ float powell(float* args, int n);
 
 	///\note This is only a 4d function
-	__device__ double shekel(double* args, int n, int m, const double* beta, const double* C);
-	__device__ double shekel2(double* args, int n);
+	__device__ float shekel(
+		      float* args,
+		      int    n,
+		      int    m,
+		const float* beta,
+		const float* C
+	);
+	__device__ float shekel2(float* args, int n);
 
-	__device__ double styblinsky_tang(double* args, int n);
+	__device__ float styblinsky_tang(float* args, int n);
 }

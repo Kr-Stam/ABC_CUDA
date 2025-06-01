@@ -5,16 +5,16 @@
 namespace problems::gpu
 {
 	///\note This is only a 2d function
-	__device__ double booth(double* args, int n);
+	__device__ float booth(float* args, int n);
 
 	///\note This is only a 2d function
-	__device__ double matyas(double* args, int n);
+	__device__ float matyas(float* args, int n);
 
 	///\note This is only a 2d function
-	__device__ double mccormick(double* args, int n);
+	__device__ float mccormick(float* args, int n);
 
-	__device__ double power_sum(double* args, int n, double* b);
-	__device__ double power_sum2(double* args, int n);
+	__device__ float power_sum(float* args, int n, float* b);
+	__device__ float power_sum2(float* args, int n);
 
-	__device__ double zakharov(double* args, int n);
+	__device__ float zakharov(float* args, int n);
 }

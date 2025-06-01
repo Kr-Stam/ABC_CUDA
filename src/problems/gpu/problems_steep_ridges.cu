@@ -1,33 +1,33 @@
 #include "problems_steep_ridges.cuh"
 #include <math.h>
 
-__device__ double problems::gpu::dejong5(double* args, int n)
+__device__ float problems::gpu::dejong5(float* args, int n)
 {
-	double result = 0.002;
+	float result = 0.002;
 	for(int i = 0; i < 25; i++)
 	{
-		double a1 = (double) (i % 5 - 2) * 16;
-		double a2 = (double) (i / 5 - 2) * 16;
+		float a1 = (float) (i % 5 - 2) * 16;
+		float a2 = (float) (i / 5 - 2) * 16;
 		result += 1.0/(i + std::pow(args[0] - a1, 6) +
 		          std::pow(args[1] - a2, 6));
 	}
 	return 1.0 / result;
 }
 
-__device__ double problems::gpu::easom(double* args, int n)
+__device__ float problems::gpu::easom(float* args, int n)
 {
 	if(n < 2) return 0;
 
-	double tmp1 = args[0] - M_PI;
-	double tmp2 = args[1] - M_PI;
+	float tmp1 = args[0] - M_PI;
+	float tmp2 = args[1] - M_PI;
 	return -std::cos(args[0])*std::cos(args[1])*
 	       std::pow(M_E, -tmp1*tmp1 - tmp2*tmp2);
 }
 
 
-__device__ double problems::gpu::michalewicz(double* args, int n, int m)
+__device__ float problems::gpu::michalewicz(float* args, int n, int m)
 {
-	double result = 0;
+	float result = 0;
 
 	for(int i = 0; i < n; i++)
 	{
@@ -37,7 +37,7 @@ __device__ double problems::gpu::michalewicz(double* args, int n, int m)
 	return result;
 }
 
-__device__ double problems::gpu::michalewicz2(double* args, int n)
+__device__ float problems::gpu::michalewicz2(float* args, int n)
 {
 	return michalewicz(args, n, 10);
 }

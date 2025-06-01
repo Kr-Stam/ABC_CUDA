@@ -4,36 +4,36 @@
 namespace problems::cpu
 {
 	///\note This is only a 2d function
-	double beale(double* args, int n);
+	float beale(float* args, int n);
 	
 	///\note This is only a 2d function
-	double branin(double* args, int n, double a, double b, double c, double r, double s, double t);
-	double branin2(double* args, int n);
+	float branin(float* args, int n, float a, float b, float c, float r, float s, float t);
+	float branin2(float* args, int n);
 
 	///\note This is only a 4d function
 	///\warning This function has not been tested
-	double colville(double* args, int n);
+	float colville(float* args, int n);
 
 	///\note This is only a 1d function
-	double forrester(double* args, int n);
+	float forrester(float* args, int n);
 
 	///\note This is only a 2d function
-	double goldstein_price(double* args, int n);
+	float goldstein_price(float* args, int n);
 
 	///\note All of the hartmann functions have not been tested
-	double hartmann3d(double* args, int n);
-	double hartmann4d(double* args, int n);
-	double hartmann6d(double* args, int n);
+	float hartmann3d(float* args, int n);
+	float hartmann4d(float* args, int n);
+	float hartmann6d(float* args, int n);
 
-	double permdb (double* args, int n, double b);
-	double permdb2 (double* args, int n);
+	float permdb (float* args, int n, float b);
+	float permdb2 (float* args, int n);
 
 	///\note This function requires at least a 4d input
-	double powell(double* args, int n);
+	float powell(float* args, int n);
 
 	///\note This is only a 4d function
-	double shekel(double* args, int n, int m, const double* beta, const double* C);
-	double shekel2(double* args, int n);
+	float shekel(float* args, int n, int m, const float* beta, const float* C);
+	float shekel2(float* args, int n);
 
-	double styblinsky_tang(double* args, int n);
+	float styblinsky_tang(float* args, int n);
 }

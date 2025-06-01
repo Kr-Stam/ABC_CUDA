@@ -4,12 +4,12 @@
 namespace problems::cpu
 {
 	///\note This is only a 2d function
-	double three_hump_camel(double* args, int n);
+	float three_hump_camel(float* args, int n);
 
 	///\note This is only a 2d function
-	double six_hump_camel(double* args, int n);
+	float six_hump_camel(float* args, int n);
 
-	double dixon_price(double* args, int n);
+	float dixon_price(float* args, int n);
 
-	double rosenbrock(double* args, int n);
+	float rosenbrock(float* args, int n);
 }

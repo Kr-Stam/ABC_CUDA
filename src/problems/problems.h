@@ -7,7 +7,7 @@
 //#include "cpu/problems_steep_ridges.h"
 //#include "cpu/problems_other.h"
 
-typedef double(*opt_func)(double*, int);
+typedef float(*opt_func)(float*, int);
 
 namespace problems::gpu {}
 namespace problems::cpu {}

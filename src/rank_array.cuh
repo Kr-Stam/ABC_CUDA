@@ -3,10 +3,13 @@
 #include <cmath>
 #include <stdio.h>
 #include "utils/utils.hpp"
+//za da go resham ova treba se da kompajliram so CUDA
+#include <cuda_runtime.h>
+
 
 namespace rank_arr
 {
-	/**
+	/*
 	 * @brief Returns an array of weights for linear rank selection
 	 *
 	 * @tparam[in]  n     Number of candidates
@@ -17,13 +20,13 @@ namespace rank_arr
 	 *
 	 * @note a_num/a_div must be less than 2
 	 * @note According to cited reasearch the ideal value of a is 1.1
-	 * */
+	 */
 	template<
 		uint32_t n,
 		int64_t  a_num,
 		int64_t  a_div
 	>
-	constexpr std::array<float, n> rank_arr_linear()
+	__device__ __host__ constexpr std::array<float, n> arr_lin()
 	{
 		std::array<float, n> arr{};
 
@@ -53,7 +56,7 @@ namespace rank_arr
 	//Computer Science Department 
 	//Vanderbilt University 
 	//according to the paper the most ideal value of max is 1.1
-	/**
+	/*
 	 * @brief Initializes an array of weights for linear rank selection
 	 *
 	 * @param[out] arr Array of at least size n
@@ -63,8 +66,8 @@ namespace rank_arr
 	 * @return The sum of all elements of the initialized array
 	 *
 	 * @note According to cited reasearch the ideal value of a is 1.1
-	 * */
-	template<unsigned int n>
+	 */
+	template<uint32_t n>
 	float init_rank_arr_linear(
 		float* arr_out,
 		float  a 
@@ -87,7 +90,7 @@ namespace rank_arr
 		return arr_out[n - 1];
 	}
 
-	/**
+	/*
 	 * @brief Returns an array of weights for exponential rank selection
 	 *
 	 * @tparam[in]  n     Number of candidates
@@ -95,13 +98,13 @@ namespace rank_arr
 	 * @tparam[in]  c_div Dividend of c
 	 *
 	 * @return A constexpr, compile time initialized array of weights
-	 * */
+	 */
 	template<
 		uint32_t n,
 		int64_t c_num,
 		int64_t c_div
 	>
-	constexpr std::array<float, n> rank_arr_exponential()
+	__device__ __host__ constexpr std::array<float, n> arr_exp()
 	{
 		float c = (float) c_num / (float) c_div;
 
@@ -124,7 +127,7 @@ namespace rank_arr
 		return arr;
 	}
 
-	/**
+	/*
 	 * @brief Returns an array of weights for exponential rank selection
 	 *
 	 * @tparam[in] n       Number of candidates
@@ -132,9 +135,9 @@ namespace rank_arr
 	 * @param[in]  c       Base of the exponent
 	 *
 	 * @return A constexpr, compile time initialized array of weights
-	 * */
-	template<unsigned int n>
-	float init_rank_arr_exponential(
+	 */
+	template<uint32_t n>
+	float init_arr_exp(
 		float* arr_out,
 		float  c
 	)
@@ -158,7 +161,7 @@ namespace rank_arr
 		return arr_out[n - 1];
 	}
 
-	/**
+	/*
 	 * @brief Initializes an array of weights for rank selection
 	 * @param[out] arr Array of at least size n
 	 * @param[in]  n   Number of candidates
@@ -169,9 +172,9 @@ namespace rank_arr
 	 * Even though this function initializes weights by rank,
 	 * it does not use the standard rank selection algorithm.
 	 * It uses the sequence n, n - 1, ..., 1
-	 * */
-	template<unsigned int n>
-	constexpr std::array<float, n> rank_arr_simple()
+	 */
+	template<uint32_t n>
+	__device__ __host__ constexpr std::array<float, n> arr_simple()
 	{
 		int sum = n * (n + 1) / 2;
 
@@ -185,7 +188,7 @@ namespace rank_arr
 		return arr;
 	}
 
-	/**
+	/*
 	 * @brief Initializes an array of weights for rank selection
 	 * @param[out] arr Array of at least size n
 	 * @param[in]  n   Number of candidates
@@ -196,9 +199,9 @@ namespace rank_arr
 	 * Even though this function initializes weights by rank,
 	 * it does not use the standard rank selection algorithm.
 	 * It uses the sequence n, n - 1, ..., 1
-	 * */
-	template<unsigned int n>
-	float init_rank_arr_simple(float* arr)
+	 */
+	template<uint32_t n>
+	float init_arr_simple(float* arr)
 	{
 		int sum = n * (n + 1) / 2;
 
@@ -211,7 +214,7 @@ namespace rank_arr
 		return (float) sum;
 	}
 
-	/**
+	/*
 	 * @brief Initializes an array of weights for rank selection
 	 *
 	 * @param[in]   n     Number of candidates
@@ -226,13 +229,13 @@ namespace rank_arr
 	 * Even though this function initializes weights by rank,
 	 * it does not use a standard rank selection algorithm.
 	 * Instead it uses the sequence c^0 + c^1 + ... c^n
-	 * */
+	 */
 	template<
 		uint32_t n,
 		int64_t  c_num,
 		int64_t  c_div
 	>
-	constexpr std::array<float, n> rank_arr_simple_exponential()
+	__device__ __host__ constexpr std::array<float, n> arr_simple_exp()
 	{
 		float c = (float) c_num / (float) c_div;
 		//the sum is (c^(n+1) - 1) / (c - 1)
@@ -247,7 +250,7 @@ namespace rank_arr
 		return arr;
 	}
 
-	/**
+	/*
 	 * @brief Initializes an array of weights for rank selection
 	 * @param[out] arr Array of at least size n
 	 * @param[in]  n   Number of candidates
@@ -259,9 +262,9 @@ namespace rank_arr
 	 * Even though this function initializes weights by rank,
 	 * it does not use a standard rank selection algorithm.
 	 * Instead it uses the sequence c^0 + c^1 + ... c^n
-	 * */
-	template<unsigned int n>
-	float init_rank_arr_simple_exponential(float* arr, float c)
+	 */
+	template<uint32_t n>
+	float init_arr_simple_exp(float* arr, float c)
 	{
 		//the sum is (c^(n+1) - 1) / (c - 1)
 		float sum = (pow(c, n + 1) - 1) / (c - 1);
@@ -274,10 +277,14 @@ namespace rank_arr
 
 		return (float) sum;
 	}
-	
+}
+
+///returns the index in constant time
+namespace rank_constant
+{
 	//? ne sum siguren za ova
-	template<unsigned int n>
-	inline int optimized_custom()
+	template<uint32_t n>
+	__device__ __host__ inline int lin(float choice)
 	{
 		//ideata pozadi ova e vo O(1) vreme da se odredi izborot
 		//pretpostavuvajki serija od 1, 2, 3, ..., n
@@ -285,13 +292,23 @@ namespace rank_arr
 
 		//ovde selekcijata e O(1), ama sepak problem e shto mora
 		//da se sortira
-		float choice = utils::random::rand_bounded_double(0, 1);
-		static float nf = [](){
-			return (float) n;
-		}();
 		static float nf_2_min_nf = [](){
-			return nf * nf - nf;
+			return (float) n * (float ) n - (float) n;
 		}();
+
+		float i = (-1 + sqrt(1 + 4 * choice * nf_2_min_nf)) / 2;
+		return (int) ceilf(i);
+	}
+
+	//! ne bi bilo losho da go gi uskladam dvete funkcii
+	template<uint32_t n>
+	__device__ inline int dev_lin(float choice)
+	{
+		//ideata pozadi ova e vo O(1) vreme da se odredi izborot
+		//pretpostavuvajki serija od 1, 2, 3, ..., n
+		//(in + i^2) / (n^2 + n) >= f
+
+		float nf_2_min_nf = (float) n * (float ) n - (float) n;
 
 		float i = (-1 + sqrt(1 + 4 * choice * nf_2_min_nf)) / 2;
 		return (int) ceilf(i);
@@ -299,11 +316,11 @@ namespace rank_arr
 	
 	//? ne sum siguren za ova
 	template<
-		unsigned int n,
-		unsigned int c_num,
-		unsigned int c_div
+		uint32_t n,
+		uint32_t c_num,
+		uint32_t c_div
 	>
-	int optimized_exponential_custom()
+	__host__ int exp(float choice)
 	{
 		//sumata e (c^(n+1) - 1) / (c - 1)
 		//da se reshi za n preku a (choice) pa se dobiva kraen rezultat:
@@ -322,7 +339,29 @@ namespace rank_arr
 			return log(c);
 		}();
 
-		float choice = utils::random::rand_bounded_double(0, 1);
+		choice *= (float) sum;
+
+		float i = log(choice*(c - 1) + 1) / ln_c - 1;
+
+		return (int) ceilf(i);
+	}
+
+	template<
+		uint32_t n,
+		uint32_t c_num,
+		uint32_t c_div
+	>
+	__device__ int dev_exp(float choice)
+	{
+		//sumata e (c^(n+1) - 1) / (c - 1)
+		//da se reshi za n preku a (choice) pa se dobiva kraen rezultat:
+		//x = (log((1 - c) (1/(1 - c) - a)) - log(c))/log(c)
+		//x = log(a (c - 1) + 1)/log(c) - 1
+
+		float c    = (float) c_num / (float) c_div;
+		float sum  = (pow(c, (n + 1)) - 1) / (c - 1);
+		float ln_c = log(c);
+
 		choice *= (float) sum;
 
 		float i = log(choice*(c - 1) + 1) / ln_c - 1;
@@ -334,11 +373,11 @@ namespace rank_arr
 	//? ako se presmeta sumata pred toa gornoto bi trebalo da e pobrzo
 	//? deka tuka treba da se presmeta pow ciklichno
 	template<
-		unsigned int n,
-		unsigned int c_num,
-		unsigned int c_div
+		uint32_t n,
+		uint32_t c_num,
+		uint32_t c_div
 	>
-	int rank_selection_exponential_optimized_custom_2()
+	__host__ int exp2(float choice)
 	{
 		//sumata e (c^(n+1) - 1) / (c - 1)
 		//se reshava sumata do sega preku celata suma so formula
@@ -361,12 +400,38 @@ namespace rank_arr
 			return pow(c, n + 1) - 1.0f;
 		}();
 
-		float choice = utils::random::rand_bounded_double(0, 1);
+		float i = log(choice * pow_c_min_one + 1) / ln_c - 1;
+
+		return (int) ceilf(i);
+	}
+	
+	//! ne mi e jasno shto sum mislel so ova
+	//? ako se presmeta sumata pred toa gornoto bi trebalo da e pobrzo
+	//? deka tuka treba da se presmeta pow ciklichno
+	template<
+		uint32_t n,
+		uint32_t c_num,
+		uint32_t c_div
+	>
+	__device__ int dev_exp2(float choice)
+	{
+		//sumata e (c^(n+1) - 1) / (c - 1)
+		//se reshava sumata do sega preku celata suma so formula
+		//(c^(x + 1) - 1)/(c^(n + 1) - 1) = a
+		//resheno za x ova e 
+		//x = (log((1 - c^(n + 1)) (1/(1 - c^(n + 1)) - a)) - log(c))/log(c)
+		//x = log(a (c^(n + 1) - 1) + 1)/log(c) - 1
+
+		//ovde selekcijata e O(1), ama sepak problem e shto mora
+		//da se sortira
+
+		//precompute static vars to be faster
+		float c = (float) c_num / (float) c_div;
+		float ln_c = log(c);
+		float pow_c_min_one = pow(c, n + 1) - 1.0f;
 
 		float i = log(choice * pow_c_min_one + 1) / ln_c - 1;
 
 		return (int) ceilf(i);
 	}
-
-
 }

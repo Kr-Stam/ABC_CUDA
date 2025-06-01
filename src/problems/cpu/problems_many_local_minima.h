@@ -3,59 +3,59 @@
 
 namespace problems::cpu
 {
-	double ackley(double* args, int n, double a, double b, double c);
+	float ackley(float* args, int n, float a, float b, float c);
 
-	double ackley2(double* args, int n);
+	float ackley2(float* args, int n);
 
 	///\note this function is only a 2d function
-	double bukin6(double* args, int n);
+	float bukin6(float* args, int n);
 
 	///\note this function in only a 2d function
-	double cross_in_tray(double* args, int n);
+	float cross_in_tray(float* args, int n);
 
 	///\note this function in only a 2d function
-	double drop_wave(double* args, int n);
+	float drop_wave(float* args, int n);
 
 	///\note this function in only a 2d function
-	double eggholder(double* args, int n);
+	float eggholder(float* args, int n);
 
 	///\note this function is only a 1d function
-	double gramacy_and_lee(double* args, int n);
+	float gramacy_and_lee(float* args, int n);
 
-	double griewank(double* args, int n);
+	float griewank(float* args, int n);
 
 	///\note This only a 2d function
-	double holder_table(double* args, int n);
+	float holder_table(float* args, int n);
 
 	///\note A has dimensions nxm
-	double langerman(double* args, int n, double* c, int m, double* A);
+	float langerman(float* args, int n, float* c, int m, float* A);
 
-	double langerman2(double* args, int n);
+	float langerman2(float* args, int n);
 
-	double levy(double* args, int n);
+	float levy(float* args, int n);
 
 	///\note This is only a 2d function
-	double levy13(double* args, int n);
+	float levy13(float* args, int n);
 
 	///\brief This is a fucntion with mutiple global
 	///       maxima which is commonly used to test
 	///       optimization functions
-	double rastrigin(int a, double* x, int n);
+	float rastrigin(int a, float* x, int n);
 
 	///brief This function is a wrapper around rastrigin
 	///      in order to make it compatible to the problem
 	///      definition
-	double rastrigin2(double* args, int n);
+	float rastrigin2(float* args, int n);
 	
 	///\note This is only a 2d function
-	double schaffer2(double* args, int n);
+	float schaffer2(float* args, int n);
 
 	///\note This is only a 2d function
-	double schaffer4(double* args, int n);
+	float schaffer4(float* args, int n);
 
-	double schwefel(double* args, int n);
+	float schwefel(float* args, int n);
 
 	///\note This is only a 2d function
-	double shubert(double* args, int n);
+	float shubert(float* args, int n);
 }
 

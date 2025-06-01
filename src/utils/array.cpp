@@ -90,6 +90,26 @@ void utils::array::print_array_double(
 }
 
 /*
+ * @brief Print an array of doubles
+ *
+ * @param[in]  arr  array to be printed
+ * @param[in]  n    number of elements
+ * */
+void utils::array::print_array_float(
+	float* arr,
+	int    n
+)
+{
+	for(int i = 0; i < n; i++)
+	{
+		printf("%.2f ", arr[i]);
+		if(i % 10 == 0 && i != 0)
+			printf("\n");
+	}
+	printf("\n");
+}
+
+/*
  * @brief Print an array of integers
  *
  * @param[in]  arr  array to be printed
