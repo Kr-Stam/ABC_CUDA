@@ -88,9 +88,12 @@ add_executable(
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/cpu/problems_valley_shaped.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/cpu/problems_steep_ridges.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/cpu/problems_other.cpp"
-	"${CMAKE_CURRENT_SOURCE_DIR}/src/abc_cpu.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/abc_main.cuh"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/abc_cpu.cuh"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/abc_gpu.cu"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/utils.cuh"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/main.cu"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/rank_array.cuh"
 	)
 
 # turn off matplotplusplus
@@ -101,8 +104,8 @@ add_executable(
 #)
 
 target_compile_options(${CMAKE_PROJECT_NAME}
-    PRIVATE $<$<COMPILE_LANGUAGE:CXX>: >
-    PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: -Xcudafe --diag_suppress=esa_on_defaulted_function_ignored --expt-relaxed-constexpr>
+	PRIVATE $<$<COMPILE_LANGUAGE:CXX>: >
+    PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: --ptxas-options=-v -Xcudafe --diag_suppress=esa_on_defaulted_function_ignored --expt-relaxed-constexpr>
 	# -g -G --ptxas-options=–allow-expensive-optimizations=true>
 )
 
