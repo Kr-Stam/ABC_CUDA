@@ -76,7 +76,6 @@ __forceinline__ __device__ float fast_clip_float(
 	float upper_bound
 )
 {
-	n = (n > lower_bound) * n + !(n > lower_bound) * lower_bound;
 	return (n < upper_bound) * n + !(n < upper_bound) * upper_bound;
 }
 
@@ -92,6 +91,5 @@ __forceinline__ __device__ double fast_clip_double(
 	float upper_bound
 )
 {
-	n = (n > lower_bound) * n + !(n > lower_bound) * lower_bound;
 	return (n < upper_bound) * n + !(n < upper_bound) * upper_bound;
 }

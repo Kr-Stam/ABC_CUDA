@@ -11,9 +11,8 @@
 #include "abc_cpu.cuh"
 #include "abc_gpu.cuh"
 #include "problems/problems.h"
-#include "problems/cpu/problems_many_local_minima.h"
-#include "problems/cpu/problems_valley_shaped.h"
-#include "problems/gpu/problems_many_local_minima.cuh"
+#include "problems/gpu/many_local_minima.cuh"
+#include "problems/gpu/valley_shaped.cuh"
 #include "utils/array.hpp"
 
 //kje mora da gi izvadam kako vrednosti posle
@@ -53,13 +52,15 @@ void abc_cpu_test(
 		cpu::abc<
 			dimensions,
 			bees_count,
-			bees_count,
+			bees_count/10,
 			max_trials,
 			true,
 			RANK,
-			FULL,
-			CONSTANT_EXPONENTIAL_2,
-			SINGLE
+			PARTIAL,
+			LINEAR_ARRAY,
+			SINGLE,
+			bees_count / 10,
+			3
 		>(
 			&bees,
 			step,
@@ -111,6 +112,7 @@ void abc_gpu_test()
 	float upper_bound[] = {+10, +10};
 	float lower_bound[] = {-10, -10};
 	opt_func optimization_function = problems::gpu::cross_in_tray;
+	//opt_func optimization_function = problems::gpu::rosenbrock;
 
 	//variable initialization
 	int num_of_bees     =  1024;
@@ -131,7 +133,42 @@ void abc_gpu_test()
 		10
 	);
 
-	for(int i = 0; i < num_of_bees; i++)
+	//for(int i = 0; i < num_of_bees; i++)
+	//{
+	//	printf(
+	//		"Bee%03d: x=%.2f y=%.2f value=%.2f\n",
+	//		i,
+	//		coords[i*DIMENSIONS + 0],
+	//		coords[i*DIMENSIONS + 1],
+	//		values[i]
+	//	);
+	//}
+
+	for(int i = 0; i < 10; i++)
+	{
+		float min = values[i];
+		int min_idx;
+		for(int j = i; j < num_of_bees; j++)
+		{
+			if(min > values[j])
+			{
+				min_idx = j;
+				min = values[j];
+			}
+		}
+		float tmp = values[i];
+		values[i] = values[min_idx];
+		values[min_idx] = tmp;
+
+		for(int k = 0; k < DIMENSIONS; k++)
+		{
+			tmp = coords[i*DIMENSIONS + k];
+			coords[i*DIMENSIONS + k] = coords[min_idx*DIMENSIONS + k];
+			coords[min_idx*DIMENSIONS + k] = tmp;
+		}
+
+	}
+	for(int i = 0; i < 10; i++)
 	{
 		printf(
 			"Bee%03d: x=%.2f y=%.2f value=%.2f\n",
@@ -145,9 +182,9 @@ void abc_gpu_test()
 
 int main()
 {
-	float lower_bounds[] = {-10, -10};
-	float upper_bounds[] = { 10,  10};
-	//abc_cpu_test<2, 10000, 10>(
+	//float lower_bounds[] = {-10, -10};
+	//float upper_bounds[] = { 10,  10};
+	//abc_cpu_test<2, 1000, 10>(
 	//	problems::cpu::rosenbrock,
 	//	lower_bounds,
 	//	upper_bounds,

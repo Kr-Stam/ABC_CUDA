@@ -1,4 +1,4 @@
-#include "problems_steep_ridges.h"
+#include "steep_ridges.h"
 #include <math.h>
 
 float problems::cpu::dejong5(float* args, int n)

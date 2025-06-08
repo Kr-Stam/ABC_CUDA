@@ -1,7 +1,7 @@
-#include "problems_many_local_minima.h"
+#include "many_local_minima.cuh"
 #include <math.h>
 
-float problems::cpu::ackley(float* args, int n, float a, float b, float c)
+__host__ __device__ float problems::gpu::ackley(float* args, int n, float a, float b, float c)
 {
 	float result;
 	float sum_x2 = 0;
@@ -17,13 +17,13 @@ float problems::cpu::ackley(float* args, int n, float a, float b, float c)
 	return result;
 }
 
-float problems::cpu::ackley2(float* args, int n)
+__host__ __device__ float problems::gpu::ackley2(float* args, int n)
 {
 	return ackley(args, n, 20, 0.2, 2*M_PI);
 }
 
 ///\note this function is only a 2d function
-float problems::cpu::bukin6(float* args, int n)
+__host__ __device__ float problems::gpu::bukin6(float* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -32,7 +32,7 @@ float problems::cpu::bukin6(float* args, int n)
 }
 
 ///\note this function in only a 2d function
-float problems::cpu::cross_in_tray(float* args, int n)
+__host__ __device__ float problems::gpu::cross_in_tray(float* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -43,7 +43,7 @@ float problems::cpu::cross_in_tray(float* args, int n)
 }
 
 ///\note this function in only a 2d function
-float problems::cpu::drop_wave(float* args, int n)
+__host__ __device__ float problems::gpu::drop_wave(float* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -54,7 +54,7 @@ float problems::cpu::drop_wave(float* args, int n)
 }
 
 ///\note this function in only a 2d function
-float problems::cpu::eggholder(float* args, int n)
+__host__ __device__ float problems::gpu::eggholder(float* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -63,7 +63,7 @@ float problems::cpu::eggholder(float* args, int n)
 }
 
 ///\note this function is only a 1d function
-float problems::cpu::gramacy_and_lee(float* args, int n)
+__host__ __device__ float problems::gpu::gramacy_and_lee(float* args, int n)
 {
 	if(n < 1) return 0;
 
@@ -72,7 +72,7 @@ float problems::cpu::gramacy_and_lee(float* args, int n)
 		   tmp * tmp * tmp * tmp;
 }
 
-float problems::cpu::griewank(float* args, int n)
+__host__ __device__ float problems::gpu::griewank(float* args, int n)
 {
 	float result  = 0;
 	float product = 1;
@@ -87,7 +87,7 @@ float problems::cpu::griewank(float* args, int n)
 }
 
 ///\note This only a 2d function
-float problems::cpu::holder_table(float* args, int n)
+__host__ __device__ float problems::gpu::holder_table(float* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -96,7 +96,7 @@ float problems::cpu::holder_table(float* args, int n)
 }
 
 ///\note A has dimensions nxm
-float problems::cpu::langerman(float* args, int n, float* c, int m, float* A)
+__host__ __device__ float problems::gpu::langerman(float* args, int n, float* c, int m, float* A)
 {
 	float result = 0;
 	for(int i = 0; i < m; i++)
@@ -114,7 +114,7 @@ float problems::cpu::langerman(float* args, int n, float* c, int m, float* A)
 	return result;
 }
 
-float problems::cpu::langerman2(float* args, int n)
+__host__ __device__ float problems::gpu::langerman2(float* args, int n)
 {
 	float A[] = {
 		3, 5,
@@ -128,7 +128,7 @@ float problems::cpu::langerman2(float* args, int n)
 	return langerman(args, n, c, 5, A);
 }
 
-float problems::cpu::levy(float* args, int n)
+__host__ __device__ float problems::gpu::levy(float* args, int n)
 {
 	float tmp, tmp1;
 	float result = 0;
@@ -154,7 +154,7 @@ float problems::cpu::levy(float* args, int n)
 }
 
 ///\note This is only a 2d function
-float problems::cpu::levy13(float* args, int n)
+__host__ __device__ float problems::gpu::levy13(float* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -171,7 +171,7 @@ float problems::cpu::levy13(float* args, int n)
 ///\brief This is a fucntion with mutiple global
 ///       maxima which is commonly used to test
 ///       optimization functions
-float problems::cpu::rastrigin(int a, float* x, int n)
+__host__ __device__ float problems::gpu::rastrigin(int a, float* x, int n)
 {
 	float result = a * n;
 	for(int i = 0; i < n; i++)
@@ -184,13 +184,13 @@ float problems::cpu::rastrigin(int a, float* x, int n)
 ///brief This function is a wrapper around rastrigin
 ///      in order to make it compatible to the problem
 ///      definition
-float problems::cpu::rastrigin2(float* args, int n)
+__host__ __device__ float problems::gpu::rastrigin2(float* args, int n)
 {
 	return rastrigin(10, args, n);
 }
 
 ///\note This is only a 2d function
-float problems::cpu::schaffer2(float* args, int n)
+__host__ __device__ float problems::gpu::schaffer2(float* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -202,7 +202,7 @@ float problems::cpu::schaffer2(float* args, int n)
 }
 
 ///\note This is only a 2d function
-float problems::cpu::schaffer4(float* args, int n)
+__host__ __device__ float problems::gpu::schaffer4(float* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -213,7 +213,7 @@ float problems::cpu::schaffer4(float* args, int n)
 	return 0.5 + (tmp1*tmp1 - 0.5)/tmp2/tmp2;
 }
 
-float problems::cpu::schwefel(float* args, int n)
+__host__ __device__ float problems::gpu::schwefel(float* args, int n)
 {
 	float result = 418.9829*n;
 	for(int i = 0; i < n; i++)
@@ -225,7 +225,7 @@ float problems::cpu::schwefel(float* args, int n)
 }
 
 ///\note This is only a 2d function
-float problems::cpu::shubert(float* args, int n)
+__host__ __device__ float problems::gpu::shubert(float* args, int n)
 {
 	if(n < 2) return 0;
 	float sum1 = 0;

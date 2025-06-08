@@ -1,7 +1,7 @@
-#include "problems_other.cuh"
+#include "other.h"
 #include <math.h>
 
-__device__ float problems::gpu::beale(float* args, int n)
+float problems::cpu::beale(float* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -13,7 +13,7 @@ __device__ float problems::gpu::beale(float* args, int n)
 	return tmp2*tmp2 + tmp3*tmp3 + tmp4*tmp4;
 }
 
-__device__ float problems::gpu::branin(
+float problems::cpu::branin(
 	float* args,
 	int    n,
 	float  a,
@@ -31,9 +31,9 @@ __device__ float problems::gpu::branin(
 	return a*tmp*tmp + s*(1-t)*std::cos(args[0]) + s;
 }
 
-__device__ float problems::gpu::branin2(float* args, int n)
+float problems::cpu::branin2(float* args, int n)
 {
-	return problems::gpu::branin(
+	return problems::cpu::branin(
 		args,
 		n,
 		1,
@@ -45,7 +45,7 @@ __device__ float problems::gpu::branin2(float* args, int n)
 	);
 }
 
-__device__ float problems::gpu::colville(float* args, int n)
+float problems::cpu::colville(float* args, int n)
 {
 	if(n < 4) return 0;
 	float tmp1 = args[0]*args[0] - args[1];
@@ -59,14 +59,14 @@ __device__ float problems::gpu::colville(float* args, int n)
 		   19.8*tmp5*tmp6;
 }
 
-__device__ float problems::gpu::forrester(float* args, int n)
+float problems::cpu::forrester(float* args, int n)
 {
 	if(n < 1) return 0;
 	float tmp = 6*args[0] - 2;
 	return tmp*tmp*std::sin(12*args[0] - 4);
 }
 
-__device__ float problems::gpu::goldstein_price(float* args, int n)
+float problems::cpu::goldstein_price(float* args, int n)
 {
 	float tmp1 = args[0] + args[1] + 1;
 	float x2 = args[0]*args[0];
@@ -79,21 +79,21 @@ __device__ float problems::gpu::goldstein_price(float* args, int n)
 		   27*y2));
 }
 
-__constant__ const float h3_alpha[] = {1.0, 1.2, 3.0, 3.2};
-__constant__ const float h3_a[] = {
+const float h3_alpha[] = {1.0, 1.2, 3.0, 3.2};
+const float h3_a[] = {
 	3.0, 10, 30,
 	0.1, 10, 35,
 	3.0, 10, 30,
 	0.1, 10, 35
 };
-__constant__ const float h3_p[] = {
+const float h3_p[] = {
 	0.3689, 0.1170, 0.2673,
 	0.4699, 0.4387, 0.7470,
 	0.1091, 0.8732, 0.5547,
 	0.0381, 0.5743, 0.8828
 };
 
-__device__ float problems::gpu::hartmann3d (float* args, int n)
+float problems::cpu::hartmann3d (float* args, int n)
 {
 	if(n < 3) return 0;
 
@@ -111,21 +111,21 @@ __device__ float problems::gpu::hartmann3d (float* args, int n)
 	return outer;
 }
 
-__constant__ const float h4_alpha[] = {1.0, 1.2, 3.0, 3.2};
-__constant__ const float h4_a[] = {
+const float h4_alpha[] = {1.0, 1.2, 3.0, 3.2};
+const float h4_a[] = {
 	  10,  3,   17,  3.5, 1.7,  8,
 	0.05, 10,   17,  0.1,   8, 14,
 	   3, 3.5,  1.7,  10,  17,  8,
 	  17,   8, 0.05,  10, 0.1, 14 
 };
-__constant__ const float h4_p[] = {
+const float h4_p[] = {
 	0.1312, 0.1696, 0.5569, 0.0124, 0.8283, 0.5886,
 	0.2329, 0.4135, 0.8307, 0.3736, 0.1004, 0.9991,
 	0.2348, 0.1451, 0.3522, 0.2883, 0.3047, 0.6650,
 	0.4047, 0.8828, 0.8732, 0.5743, 0.1091, 0.0381
 };
 
-__device__ float problems::gpu::hartmann4d (float* args, int n)
+float problems::cpu::hartmann4d (float* args, int n)
 {
 	if(n < 4) return 0;
 
@@ -143,21 +143,21 @@ __device__ float problems::gpu::hartmann4d (float* args, int n)
 	return 1.0/0.839*outer;
 }
 
-__constant__ const float h6_alpha[] = {1.0, 1.2, 3.0, 3.2};
-__constant__ const float h6_a[] = {
+const float h6_alpha[] = {1.0, 1.2, 3.0, 3.2};
+const float h6_a[] = {
 	  10,  3,   17,  3.5, 1.7,  8,
 	0.05, 10,   17,  0.1,   8, 14,
 	   3, 3.5,  1.7,  10,  17,  8,
 	  17,   8, 0.05,  10, 0.1, 14 
 };
-__constant__ const float h6_p[] = {
+const float h6_p[] = {
 	0.1312, 0.1696, 0.5569, 0.0124, 0.8283, 0.5886,
 	0.2329, 0.4135, 0.8307, 0.3736, 0.1004, 0.9991,
 	0.2348, 0.1451, 0.3522, 0.2883, 0.3047, 0.6650,
 	0.4047, 0.8828, 0.8732, 0.5743, 0.1091, 0.0381
 };
 
-__device__ float problems::gpu::hartmann6d (float* args, int n)
+float problems::cpu::hartmann6d (float* args, int n)
 {
 	if(n < 6) return 0;
 
@@ -175,7 +175,7 @@ __device__ float problems::gpu::hartmann6d (float* args, int n)
 	return outer;
 }
 
-__device__ float problems::gpu::permdb(float* args, int n, float b)
+float problems::cpu::permdb(float* args, int n, float b)
 {
 	float outer = 0;
 	for(int i = 0; i < n; i++)
@@ -184,22 +184,20 @@ __device__ float problems::gpu::permdb(float* args, int n, float b)
 		for(int j = 0; j < n; j++)
 		{
 			//? ne znam dali porgreshno beshe opishano?
-			//inner += ((std::pow(j+1, i+1)+b)*
-			//         (std::pow(args[i]/(j+1), i+1) - 1));
-			inner += (std::pow(j+1, i+1)+b) * 
-			         (std::pow(args[j]/(j+1), i+1) - 1);
+			//inner += ((std::pow(j+1, i+1)+b)*(std::pow(args[i]/(j+1), i+1) - 1));
+			inner += ((std::pow(j+1, i+1)+b)*(std::pow(args[j]/(j+1), i+1) - 1));
 		}
 		outer += inner*inner;
 	}
 	return outer;
 }
 
-__device__ float problems::gpu::permdb2(float* args, int n)
+float problems::cpu::permdb2(float* args, int n)
 {
-	return problems::gpu::permdb(args, n, 0.5);
+	return problems::cpu::permdb(args, n, 0.5);
 }
 
-__device__ float problems::gpu::powell(float* args, int n)
+float problems::cpu::powell(float* args, int n)
 {
 	if(n < 4) return 0;
 
@@ -217,7 +215,7 @@ __device__ float problems::gpu::powell(float* args, int n)
 	return result;
 }
 
-__device__ float problems::gpu::shekel(
+float problems::cpu::shekel(
 	      float* args,
 	      int    n,
 	      int    m,
@@ -239,23 +237,23 @@ __device__ float problems::gpu::shekel(
 	return outer;
 }
 
-__constant__ const float sh_beta[] = {
-	0.1, 0.2, 0.2, 0.4, 0.4, 0.6, 0.3, 0.7, 0.5, 0.5 
+const float sh_beta[] = {
+	0.1, 0.2, 0.2, 0.4, 0.4, 0.6, 0.3, 0.7, 0.5, 0.5
 };
 
-__constant__ const float sh_c[] = {
+const float sh_c[] = {
 	4.0, 1.0, 8.0, 6.0, 3.0, 2.0, 5.0, 8.0, 6.0, 7.0,
 	4.0, 1.0, 8.0, 6.0, 7.0, 9.0, 3.0, 1.0, 2.0, 3.6,
 	4.0, 1.0, 8.0, 6.0, 3.0, 2.0, 5.0, 8.0, 6.0, 7.0,
 	4.0, 1.0, 8.0, 6.0, 7.0, 9.0, 3.0, 1.0, 2.0, 3.6
 };
 
-__device__ float problems::gpu::shekel2(float* args, int n)
+float problems::cpu::shekel2(float* args, int n)
 {
-	return problems::gpu::shekel(args, n, 10, sh_beta, sh_c);
+	return problems::cpu::shekel(args, n, 10, sh_beta, sh_c);
 }
 
-__device__ float problems::gpu::styblinsky_tang(float* args, int n)
+float problems::cpu::styblinsky_tang(float* args, int n)
 {
 	float result = 0;
 	for(int i = 0; i < n; i++)
@@ -263,5 +261,6 @@ __device__ float problems::gpu::styblinsky_tang(float* args, int n)
 		float tmp = args[i]*args[i];
 		result += tmp*tmp - 16*tmp + 5*args[i];
 	}
+
 	return 0.5*result;
 }

@@ -1,7 +1,8 @@
-#include "problems_valley_shaped.cuh"
+#include "valley_shaped.h"
+#include "../problems.h"
 #include <math.h>
 
-__device__ float problems::gpu::three_hump_camel(float* args, int n)
+float problems::cpu::three_hump_camel(float* args, int n)
 {
 	float x2 = args[0]*args[0];
 
@@ -9,7 +10,7 @@ __device__ float problems::gpu::three_hump_camel(float* args, int n)
 	       args[1]*args[1];
 }
 
-__device__ float problems::gpu::six_hump_camel(float* args, int n)
+float problems::cpu::six_hump_camel(float* args, int n)
 {
 	float x2 = args[0]*args[0];
 	float y2 = args[1]*args[1];
@@ -18,7 +19,7 @@ __device__ float problems::gpu::six_hump_camel(float* args, int n)
 	       (-4 + 4*y2)*y2;
 }
 
-__device__ float problems::gpu::dixon_price(float* args, int n)
+float problems::cpu::dixon_price(float* args, int n)
 {
 	float result = 0;
 	float tmp = (args[0] - 1);
@@ -32,7 +33,7 @@ __device__ float problems::gpu::dixon_price(float* args, int n)
 	return result;
 }
 
-__device__ float problems::gpu::rosenbrock(float* args, int n)
+float problems::cpu::rosenbrock(float* args, int n)
 {
 	float result = 0;
 	for(int i = 0; i < n - 1; i++)

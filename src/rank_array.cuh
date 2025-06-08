@@ -280,7 +280,7 @@ namespace rank_arr
 }
 
 ///returns the index in constant time
-namespace rank_constant
+namespace rank_const
 {
 	//? ne sum siguren za ova
 	template<uint32_t n>

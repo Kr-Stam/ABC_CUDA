@@ -1,8 +1,7 @@
-#include "problems_bowl_shaped.cuh"
+#include "bowl_shaped.h"
 #include <math.h>
-#include <stdio.h>
 
-__device__ float problems::gpu::bohachevsky1(float* args, int n)
+float problems::cpu::bohachevsky1(float* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -11,7 +10,7 @@ __device__ float problems::gpu::bohachevsky1(float* args, int n)
 		   0.4*std::cos(4*M_PI*args[1]) + 0.7;
 }
 
-__device__ float problems::gpu::bohachevsky2(float* args, int n)
+float problems::cpu::bohachevsky2(float* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -19,7 +18,7 @@ __device__ float problems::gpu::bohachevsky2(float* args, int n)
 		   0.3*std::cos(3*M_PI*args[0])*std::cos(4*M_PI*args[1]) + 0.3;
 }
 
-__device__ float problems::gpu::bohachevsky3(float* args, int n)
+float problems::cpu::bohachevsky3(float* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -27,17 +26,16 @@ __device__ float problems::gpu::bohachevsky3(float* args, int n)
 		   0.3*std::cos(3*M_PI*args[0] + 4*M_PI*args[1]) + 0.3;
 }
 
-__device__ float problems::gpu::sphere(float* args, int n)
+float problems::cpu::sphere(float* args, int n)
 {
 	float result = 0;
-
 	for(int i = 0; i < n; i++)
 		result += args[i] * args[i];
 
 	return result;
 }
 
-__device__ float problems::gpu::perm(float* args, int n, int b)
+float problems::cpu::perm(float* args, int n, int b)
 {
 	float result = 0;
 	for(int i = 0; i < n; i++)
@@ -45,7 +43,7 @@ __device__ float problems::gpu::perm(float* args, int n, int b)
 		float tmp = 0;
 		for(int j = 0; j < n; j++)
 			tmp += (j+b)*(std::pow(args[j], (float)i+1) -
-					      std::pow(1.0/(j+1), i+1));
+			       std::pow(1.0/(j+1), i+1));
 
 		result += tmp*tmp;
 	}
@@ -53,12 +51,12 @@ __device__ float problems::gpu::perm(float* args, int n, int b)
 	return result;
 }
 
-__device__ float problems::gpu::perm2(float* args, int n)
+float problems::cpu::perm2(float* args, int n)
 {
 	return perm(args, n, 10);
 }
 
-__device__ float problems::gpu::rotated_hyper_elipsoid(float* args, int n)
+float problems::cpu::rotated_hyper_elipsoid(float* args, int n)
 {
 	float result = 0;
 
@@ -69,7 +67,7 @@ __device__ float problems::gpu::rotated_hyper_elipsoid(float* args, int n)
 	return result;
 }
 
-__device__ float problems::gpu::sum_of_different_powers(float* args, int n)
+float problems::cpu::sum_of_different_powers(float* args, int n)
 {
 	float result = 0;
 	for(int i = 0; i < n; i++)
@@ -78,7 +76,7 @@ __device__ float problems::gpu::sum_of_different_powers(float* args, int n)
 	return result;
 }
 
-__device__ float problems::gpu::sum_squares(float* args, int n)
+float problems::cpu::sum_squares(float* args, int n)
 {
 	float result = 0;
 	for(int i = 0; i < n; i++)
@@ -87,7 +85,7 @@ __device__ float problems::gpu::sum_squares(float* args, int n)
 	return result;
 }
 
-__device__ float problems::gpu::trid(float* args, int n)
+float problems::cpu::trid(float* args, int n)
 {
 	float result = 0;
 	float tmp = args[0] - 1;

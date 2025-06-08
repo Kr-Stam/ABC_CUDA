@@ -76,18 +76,18 @@ add_executable(
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/utils/random.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/utils/utils.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/problems.h"
-	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/gpu/problems_many_local_minima.cu"
-	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/gpu/problems_bowl_shaped.cu"
-	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/gpu/problems_plate_shaped.cu"
-	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/gpu/problems_valley_shaped.cu"
-	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/gpu/problems_steep_ridges.cu"
-	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/gpu/problems_other.cu"
-	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/cpu/problems_many_local_minima.cpp"
-	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/cpu/problems_bowl_shaped.cpp"
-	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/cpu/problems_plate_shaped.cpp"
-	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/cpu/problems_valley_shaped.cpp"
-	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/cpu/problems_steep_ridges.cpp"
-	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/cpu/problems_other.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/gpu/many_local_minima.cu"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/gpu/bowl_shaped.cu"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/gpu/plate_shaped.cu"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/gpu/valley_shaped.cu"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/gpu/steep_ridges.cu"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/gpu/other.cu"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/cpu/many_local_minima.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/cpu/bowl_shaped.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/cpu/plate_shaped.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/cpu/valley_shaped.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/cpu/steep_ridges.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/problems/cpu/other.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/abc_main.cuh"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/abc_cpu.cuh"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/abc_gpu.cu"
@@ -110,7 +110,8 @@ target_compile_options(${CMAKE_PROJECT_NAME}
 )
 
 set_property(TARGET ${CMAKE_PROJECT_NAME} PROPERTY CUDA_SEPARABLE_COMPILATION ON)
-set_property(TARGET ${CMAKE_PROJECT_NAME} PROPERTY CUDA_ARCHITECTURES 61 75 87 80) # Running on GTX 1080 Ti, GTX 1660 Ti, and Jetson AGX Orin
+#set_property(TARGET ${CMAKE_PROJECT_NAME} PROPERTY CUDA_ARCHITECTURES 61 75 87 80) # Running on GTX 1080 Ti, GTX 1660 Ti, and Jetson AGX Orin
+set_property(TARGET ${CMAKE_PROJECT_NAME} PROPERTY CUDA_ARCHITECTURES 80)
 
 if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
     target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE _DEBUG)

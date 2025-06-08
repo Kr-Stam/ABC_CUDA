@@ -1,7 +1,7 @@
-#include "problems_plate_shaped.h"
+#include "plate_shaped.cuh"
 #include <math.h>
 
-float problems::cpu::booth(float* args, int n)
+__host__ __device__ float problems::gpu::booth(float* args, int n)
 {
 	if(n < 2) return 0;
 
@@ -10,7 +10,7 @@ float problems::cpu::booth(float* args, int n)
 	return tmp1*tmp1 + tmp2*tmp2;
 }
 
-float problems::cpu::matyas(float* args, int n)
+__host__ __device__ float problems::gpu::matyas(float* args, int n)
 {
 	if (n < 2) return 0;
 
@@ -18,7 +18,7 @@ float problems::cpu::matyas(float* args, int n)
 	       0.48*args[0]*args[1];
 }
 
-float problems::cpu::mccormick(float* args, int n)
+__host__ __device__ float problems::gpu::mccormick(float* args, int n)
 {
 	if (n < 2) return 0;
 
@@ -27,28 +27,29 @@ float problems::cpu::mccormick(float* args, int n)
 	       1.5*args[0] + 2.5*args[1] + 1;
 }
 
-float problems::cpu::power_sum(float* args, int n, float* b)
+__host__ __device__ float problems::gpu::power_sum(float* args, int n, float* b)
 {
 	float result = 0;
 	for(int i = 0; i < n; i++)
 	{
 		float tmp = -b[i];
 		for(int j = 0; j < n; j++)
+		{
 			tmp += std::pow(args[j], i+1);
-
+		}
 		result += tmp*tmp;
 	}
 	return result;
 }
 
-float problems::cpu::power_sum2(float* args, int n)
+__host__ __device__ float problems::gpu::power_sum2(float* args, int n)
 {
 	float b[] = {8, 18, 44, 114};
 
-	return problems::cpu::power_sum(args, n, b);
+	return problems::gpu::power_sum(args, n, b);
 }
 
-float problems::cpu::zakharov(float* args, int n)
+__host__ __device__ float problems::gpu::zakharov(float* args, int n)
 {
 	float sum1 = 0;
 	float sum2 = 0;
