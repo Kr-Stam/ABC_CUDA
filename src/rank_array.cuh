@@ -1,11 +1,8 @@
-#include <array>
+#pragma once
+
 #include <cstdint>
 #include <cmath>
-#include <stdio.h>
-#include "utils/utils.hpp"
-//za da go resham ova treba se da kompajliram so CUDA
 #include <cuda_runtime.h>
-
 
 namespace rank_arr
 {

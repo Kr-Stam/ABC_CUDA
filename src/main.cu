@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 #include <math.h>
+#include <array>
 #include "abc_cpu.cuh"
 #include "abc_gpu.cuh"
 #include "problems/problems.h"
@@ -59,7 +60,7 @@ void abc_cpu_test(
 			PARTIAL,
 			LINEAR_ARRAY,
 			SINGLE,
-			bees_count / 10,
+			bees_count/10,
 			3
 		>(
 			&bees,
@@ -109,8 +110,8 @@ void abc_cpu_test(
 
 void abc_gpu_test()
 {
-	float upper_bound[] = {+10, +10};
-	float lower_bound[] = {-10, -10};
+	float lower_bound[DIMENSIONS] = {-10.0f, -10.0f};
+	float upper_bound[DIMENSIONS] = {+10.0f, +10.0f};
 	opt_func optimization_function = problems::gpu::cross_in_tray;
 	//opt_func optimization_function = problems::gpu::rosenbrock;
 
@@ -119,18 +120,23 @@ void abc_gpu_test()
 	int max_generations = 10000;
   	int max_trials      =    20;
 
-	float* coords = (float*) malloc(num_of_bees * sizeof(float) * DIMENSIONS);
+	float* cords = (float*) malloc(num_of_bees * sizeof(float) * DIMENSIONS);
 	float* values = (float*) malloc(num_of_bees * sizeof(float));
-	gpu::launch_abc(
-		coords,
+	gpu::launch_abc
+	//<
+	//	DIMENSIONS,
+	//	100,
+	//	512
+	//>
+	(
+		cords,
 		values,
-		num_of_bees,
 		max_generations,
 		max_trials,
 		optimization_function,
+		10,
 		lower_bound,
-		upper_bound,
-		10
+		upper_bound
 	);
 
 	//for(int i = 0; i < num_of_bees; i++)
@@ -162,9 +168,9 @@ void abc_gpu_test()
 
 		for(int k = 0; k < DIMENSIONS; k++)
 		{
-			tmp = coords[i*DIMENSIONS + k];
-			coords[i*DIMENSIONS + k] = coords[min_idx*DIMENSIONS + k];
-			coords[min_idx*DIMENSIONS + k] = tmp;
+			tmp = cords[i*DIMENSIONS + k];
+			cords[i*DIMENSIONS + k] = cords[min_idx*DIMENSIONS + k];
+			cords[min_idx*DIMENSIONS + k] = tmp;
 		}
 
 	}
@@ -173,8 +179,8 @@ void abc_gpu_test()
 		printf(
 			"Bee%03d: x=%.2f y=%.2f value=%.2f\n",
 			i,
-			coords[i*DIMENSIONS + 0],
-			coords[i*DIMENSIONS + 1],
+			cords[i*DIMENSIONS + 0],
+			cords[i*DIMENSIONS + 1],
 			values[i]
 		);
 	}

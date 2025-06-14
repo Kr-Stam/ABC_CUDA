@@ -105,7 +105,7 @@ add_executable(
 
 target_compile_options(${CMAKE_PROJECT_NAME}
 	PRIVATE $<$<COMPILE_LANGUAGE:CXX>: >
-    PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: --ptxas-options=-v -Xcudafe --diag_suppress=esa_on_defaulted_function_ignored --expt-relaxed-constexpr>
+    PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: --ptxas-options=-v -Xcudafe --diag_suppress=esa_on_defaulted_function_ignored --expt-relaxed-constexpr -std=c++20>
 	# -g -G --ptxas-options=–allow-expensive-optimizations=true>
 )
 
