@@ -165,32 +165,74 @@ namespace cpu
 	 *       the top/best num_of_candidates bees then the Bee pointers
 	 *       must be sorted beforehand
 	 */
-	template<uint32_t size>
+	template<
+		uint32_t size,
+		Roulette roulette_type
+	>
 	inline void create_roulette_wheel(
 		std::vector<Bee>*       bees,
 		std::array<float, size> roulette
 	)
 	{
-		float sum = roulette[0];
-		float max = roulette[0];
-		#pragma unroll
-		for(int idx = 1; idx < size; idx++)
+		float min, max, sum;
+
+		if constexpr (roulette_type == SUM)
 		{
-			// the inverse is used in order to select for the 
-			// global minimum
-			//roulette[idx] = 1.00 / (*bees)[idx].value;
-			roulette[idx] = (*bees)[idx].value;
-			sum += roulette[idx];
-			max = roulette[idx] > max ? roulette[idx] : max;
+			sum = roulette[0];
+			max = roulette[0];
+			#pragma unroll
+			for(int idx = 1; idx < size; idx++)
+			{
+				roulette[idx] = (*bees)[idx].value;
+				sum += roulette[idx];
+				max = roulette[idx] > max ? roulette[idx] : max;
+			}
+
+			//cumulative distribution
+			roulette[0] = roulette[0] / sum;
+		}
+		else if constexpr (roulette_type == CUSTOM)
+		{
+			sum = roulette[0];
+			max = roulette[0];
+			#pragma unroll
+			for(int idx = 1; idx < size; idx++)
+			{
+				// the inverse is used in order to select for the 
+				// global minimum
+				//roulette[idx] = 1.00 / (*bees)[idx].value;
+				roulette[idx] = (*bees)[idx].value;
+				sum += roulette[idx];
+				max = roulette[idx] > max ? roulette[idx] : max;
+			}
+			
+			//cumulative distribution
+			sum = max * size - sum;
+			roulette[0] = roulette[0] / sum;
+		}
+		else if constexpr (roulette_type == MIN_MAX)
+		{
+			max = roulette[0];
+			min = roulette[0];
+			#pragma unroll
+			for(int idx = 1; idx < size; idx++)
+			{
+				roulette[idx] = (*bees)[idx].value;
+				min = roulette[idx] < min ? roulette[idx] : min;
+				max = roulette[idx] > max ? roulette[idx] : max;
+			}
 		}
 
-		//cumulative distribution
-		sum = max * size - sum;
-		roulette[0] = roulette[0] / sum;
 		#pragma unroll
 		for(int idx = 1; idx < size; idx++)
 		{
-			roulette[idx] = (max - roulette[idx]) / sum + roulette[idx - 1];
+			if constexpr (roulette_type == SUM)
+				roulette[idx] = roulette[idx] / sum + roulette[idx - 1];
+			else if constexpr (roulette_type == CUSTOM)
+				roulette[idx] = (max - roulette[idx]) / sum + roulette[idx - 1];
+			else if constexpr (roulette_type == MIN_MAX)
+				roulette[idx] = (roulette[idx] - min) / (max - min);
+
 			if(roulette[idx] < 0)
 			{
 				roulette[idx] = 1;
@@ -199,7 +241,7 @@ namespace cpu
 		}
 	}
 
-	/**
+	/*
 	 * @brief Selects a random item from a roulette wheel according to
 	 *        weighted roulette wheel selection
 	 *
@@ -209,7 +251,7 @@ namespace cpu
 	 *
 	 * @warning This function expects a cumulative distribution, all items
 	 *          of the roulette should sum up to 1.0
-	 * */
+	 */
 	template<uint32_t size>
 	inline int spin_roulette(std::array<float, size> roulette, float rand)
 	{
@@ -382,17 +424,18 @@ namespace cpu
 	 * @return void
 	 */
 	template<
-		uint32_t  dimensions,
-		uint32_t  bees_count,
-		uint32_t  scouts_count,
-		uint32_t  trials_limit, 
-		bool      inverse,
-		Selection selection_type,
-		Roulette  roulette_type,
-		Rank      rank_type,
-		Tourn     tournament_type,
-		uint32_t  tournament_size,
-		uint32_t  tournament_num
+		uint32_t    dimensions,
+		uint32_t    bees_count,
+		uint32_t    scouts_count,
+		uint32_t    trials_limit, 
+		bool        inverse,
+		Selection   selection_type,
+		Roulette    roulette_type,
+		RouletteCpu roulette_sorting,
+		Rank        rank_type,
+		Tourn       tournament_type,
+		uint32_t    tournament_size,
+		uint32_t    tournament_num
 	>
 	void abc(
 		std::vector<Bee>* bees,
@@ -414,13 +457,13 @@ namespace cpu
 		if constexpr(selection_type == RANK)
 		{
 			if constexpr (rank_type == LINEAR_ARRAY)
-				rank_arr = rank_arr::arr_lin<rank_arr_size, 190, 100>();
+				rank_arr = rank_arr::arr_lin<rank_arr_size>(1.9f); 
 			else if constexpr (rank_type == EXPONENTIAL_ARRAY)
-				rank_arr = rank_arr::arr_exp<rank_arr_size, 110, 100>();
+				rank_arr = rank_arr::arr_exp<rank_arr_size>(1.1f);
 			else if constexpr (rank_type == LINEAR_SIMPLE_ARRAY)
 				rank_arr = rank_arr::arr_simple<rank_arr_size>();
 			else if constexpr (rank_type == EXPONENTIAL_SIMPLE_ARRAY)
-				rank_arr = rank_arr::arr_simple_exp<rank_arr_size, 50, 100>();
+				rank_arr = rank_arr::arr_simple_exp<rank_arr_size>(0.5f);
 		}
 		//-----------------------MAIN-LOOP---------------------------//
 		for(int i = 0; i < max_generations; i++)
@@ -440,7 +483,7 @@ namespace cpu
 			
 			if constexpr (selection_type == ROULETTE_WHEEL)
 			{
-				if constexpr (roulette_type == PARTIAL)
+				if constexpr (roulette_sorting == PARTIAL_SORT)
 				{
 					std::partial_sort(
 						(*bees).begin(),
@@ -448,11 +491,24 @@ namespace cpu
 						(*bees).end(),
 						BeeCompare
 					);
+					create_roulette_wheel<
+						scouts_count,
+						roulette_type
+					>(
+						bees,
+						roulette
+					);
 				}
-				create_roulette_wheel<roulette_size>(
-					bees,
-					roulette
-				);
+				else
+				{
+					create_roulette_wheel<
+						roulette_size,
+						roulette_type
+					>(
+						bees,
+						roulette
+					);
+				}
 			}
 			else if constexpr (selection_type == RANK)
 			{

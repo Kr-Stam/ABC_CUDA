@@ -18,16 +18,10 @@ namespace rank_arr
 	 * @note a_num/a_div must be less than 2
 	 * @note According to cited reasearch the ideal value of a is 1.1
 	 */
-	template<
-		uint32_t n,
-		int64_t  a_num,
-		int64_t  a_div
-	>
-	__device__ __host__ constexpr std::array<float, n> arr_lin()
+	template<uint32_t n>
+	__host__ constexpr std::array<float, n> arr_lin(float a)
 	{
 		std::array<float, n> arr{};
-
-		float a = (float) a_num / (float) a_div;
 
 		if(a > 2 || n < 1) return arr;
 
@@ -65,7 +59,7 @@ namespace rank_arr
 	 * @note According to cited reasearch the ideal value of a is 1.1
 	 */
 	template<uint32_t n>
-	float init_rank_arr_linear(
+	float init_arr_lin(
 		float* arr_out,
 		float  a 
 	)
@@ -77,7 +71,6 @@ namespace rank_arr
 		float c = 1.0 / n * (b + (a - b));
 		arr_out[0] = c;
 
-		#pragma unroll
 		for(int i = 1; i < n; i++)
 		{
 			c = 1.0 / n * (b + (a - b) * (n - i - 1.0) / (n - 1.0));
@@ -96,15 +89,9 @@ namespace rank_arr
 	 *
 	 * @return A constexpr, compile time initialized array of weights
 	 */
-	template<
-		uint32_t n,
-		int64_t c_num,
-		int64_t c_div
-	>
-	__device__ __host__ constexpr std::array<float, n> arr_exp()
+	template<uint32_t n>
+	__host__ constexpr std::array<float, n> arr_exp(float c)
 	{
-		float c = (float) c_num / (float) c_div;
-
 		std::array<float, n> arr = {};
 		if(n < 1) return arr;
 
@@ -147,7 +134,6 @@ namespace rank_arr
 
 		arr_out[0] = c_nth_min_1  * c_min_1 / c_nth_min_1;
 
-		#pragma unroll
 		for(int i = 0; i < n; i++)
 		{
 			c_nth_min_i = c_nth_min_i / c;
@@ -204,9 +190,11 @@ namespace rank_arr
 
 		arr[0] = (float) n / (float) sum;
 
-		#pragma unroll
-		for(int i = 1; i < n; i++) 
-			arr[i] = (float) (2*n - 2*i - 1) / (float) sum;
+		for(int i = 1; i < n; i++)
+		{
+			float c = (float) (2*n - 2*i - 1) / (float) sum;
+			arr[i] = arr[i - 1] + c;
+		}
 
 		return (float) sum;
 	}
@@ -227,14 +215,9 @@ namespace rank_arr
 	 * it does not use a standard rank selection algorithm.
 	 * Instead it uses the sequence c^0 + c^1 + ... c^n
 	 */
-	template<
-		uint32_t n,
-		int64_t  c_num,
-		int64_t  c_div
-	>
-	__device__ __host__ constexpr std::array<float, n> arr_simple_exp()
+	template<uint32_t n>
+	__device__ __host__ constexpr std::array<float, n> arr_simple_exp(float c)
 	{
-		float c = (float) c_num / (float) c_div;
 		//the sum is (c^(n+1) - 1) / (c - 1)
 		float sum = (pow(c, n + 1) - 1) / (c - 1);
 
@@ -299,7 +282,7 @@ namespace rank_const
 
 	//! ne bi bilo losho da go gi uskladam dvete funkcii
 	template<uint32_t n>
-	__device__ inline int dev_lin(float choice)
+	__device__ __host__ inline int dev_lin(float choice)
 	{
 		//ideata pozadi ova e vo O(1) vreme da se odredi izborot
 		//pretpostavuvajki serija od 1, 2, 3, ..., n
@@ -348,7 +331,7 @@ namespace rank_const
 		uint32_t c_num,
 		uint32_t c_div
 	>
-	__device__ int dev_exp(float choice)
+	__host__ __device__ int dev_exp(float choice)
 	{
 		//sumata e (c^(n+1) - 1) / (c - 1)
 		//da se reshi za n preku a (choice) pa se dobiva kraen rezultat:
@@ -410,7 +393,7 @@ namespace rank_const
 		uint32_t c_num,
 		uint32_t c_div
 	>
-	__device__ int dev_exp2(float choice)
+	__host__ __device__ int dev_exp2(float choice)
 	{
 		//sumata e (c^(n+1) - 1) / (c - 1)
 		//se reshava sumata do sega preku celata suma so formula

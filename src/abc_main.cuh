@@ -11,8 +11,17 @@ namespace abc_shared
 
 	///@brief Choice of roulette type
 	enum Roulette {
-		FULL    = 0,
-		PARTIAL = 1
+		SUM            = 0,
+		CUSTOM         = 1,
+		MIN_MAX        = 2,
+		//! ova ne e implementirano
+		MIN_MAX_SCALED = 3
+	};
+
+	///@brief Choice of roulette type
+	enum RouletteCpu {
+		FULL         = 0,
+		PARTIAL_SORT = 1
 	};
 
 	///@brief Choice of rank selection type

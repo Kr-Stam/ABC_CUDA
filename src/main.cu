@@ -56,9 +56,12 @@ void abc_cpu_test(
 			bees_count/10,
 			max_trials,
 			true,
+			//ROULETTE_WHEEL,
 			RANK,
-			PARTIAL,
-			LINEAR_ARRAY,
+			CUSTOM,
+			PARTIAL_SORT,
+			//LINEAR_ARRAY,
+			CONSTANT_LINEAR,
 			SINGLE,
 			bees_count/10,
 			3
@@ -112,44 +115,50 @@ void abc_gpu_test()
 {
 	float lower_bound[DIMENSIONS] = {-10.0f, -10.0f};
 	float upper_bound[DIMENSIONS] = {+10.0f, +10.0f};
-	opt_func optimization_function = problems::gpu::cross_in_tray;
-	//opt_func optimization_function = problems::gpu::rosenbrock;
+	//opt_func optimization_function = problems::gpu::cross_in_tray;
+	opt_func optimization_function = problems::gpu::rosenbrock;
 
 	//variable initialization
-	int num_of_bees     =  1024;
-	int max_generations = 10000;
-  	int max_trials      =    20;
+	const size_t grid_size  = 100;
+	const size_t block_size = 512;
 
-	float* cords = (float*) malloc(num_of_bees * sizeof(float) * DIMENSIONS);
+	int num_of_bees     = grid_size*block_size;
+	int max_generations = 10000;
+  	int max_trials      = 20;
+
+	float* cords  = (float*) malloc(num_of_bees * sizeof(float) * DIMENSIONS);
 	float* values = (float*) malloc(num_of_bees * sizeof(float));
 	gpu::launch_abc
-	//<
-	//	DIMENSIONS,
-	//	100,
-	//	512
-	//>
+	<
+		DIMENSIONS,
+		grid_size,
+		block_size,
+		//ROULETTE_WHEEL,
+		RANK,
+		//TOURNAMENT,
+		MIN_MAX_SCALED,
+		LINEAR_ARRAY,
+		//EXPONENTIAL_ARRAY,
+		//CONSTANT_LINEAR,
+		//CONSTANT_EXPONENTIAL,
+		//CONSTANT_EXPONENTIAL_2,
+		SINGLE,
+		//MULTIPLE,
+		10,
+		2
+	>
 	(
 		cords,
 		values,
 		max_generations,
 		max_trials,
 		optimization_function,
-		10,
 		lower_bound,
-		upper_bound
+		upper_bound,
+		10
 	);
 
-	//for(int i = 0; i < num_of_bees; i++)
-	//{
-	//	printf(
-	//		"Bee%03d: x=%.2f y=%.2f value=%.2f\n",
-	//		i,
-	//		coords[i*DIMENSIONS + 0],
-	//		coords[i*DIMENSIONS + 1],
-	//		values[i]
-	//	);
-	//}
-
+	//proverka
 	for(int i = 0; i < 10; i++)
 	{
 		float min = values[i];
@@ -177,7 +186,7 @@ void abc_gpu_test()
 	for(int i = 0; i < 10; i++)
 	{
 		printf(
-			"Bee%03d: x=%.2f y=%.2f value=%.2f\n",
+			"Bee%03d: x=%f y=%f value=%f\n",
 			i,
 			cords[i*DIMENSIONS + 0],
 			cords[i*DIMENSIONS + 1],
@@ -188,8 +197,8 @@ void abc_gpu_test()
 
 int main()
 {
-	//float lower_bounds[] = {-10, -10};
-	//float upper_bounds[] = { 10,  10};
+	float lower_bounds[] = {-10, -10};
+	float upper_bounds[] = { 10,  10};
 	//abc_cpu_test<2, 1000, 10>(
 	//	problems::cpu::rosenbrock,
 	//	lower_bounds,
