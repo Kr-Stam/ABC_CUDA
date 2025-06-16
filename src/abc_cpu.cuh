@@ -179,13 +179,11 @@ namespace cpu
 		if constexpr (roulette_type == SUM)
 		{
 			sum = roulette[0];
-			max = roulette[0];
 			#pragma unroll
 			for(int idx = 1; idx < size; idx++)
 			{
 				roulette[idx] = (*bees)[idx].value;
 				sum += roulette[idx];
-				max = roulette[idx] > max ? roulette[idx] : max;
 			}
 
 			//cumulative distribution
@@ -208,7 +206,7 @@ namespace cpu
 			
 			//cumulative distribution
 			sum = max * size - sum;
-			roulette[0] = roulette[0] / sum;
+			roulette[0] = (max - roulette[0]) / (size*max - sum);
 		}
 		else if constexpr (roulette_type == MIN_MAX)
 		{
@@ -221,17 +219,23 @@ namespace cpu
 				min = roulette[idx] < min ? roulette[idx] : min;
 				max = roulette[idx] > max ? roulette[idx] : max;
 			}
+			
+			//cumulative distribution
+			sum = max * size - sum;
+			roulette[0] = (roulette[0] - min) / (max - min);
 		}
 
 		#pragma unroll
 		for(int idx = 1; idx < size; idx++)
 		{
 			if constexpr (roulette_type == SUM)
-				roulette[idx] = roulette[idx] / sum + roulette[idx - 1];
+				roulette[idx] = roulette[idx] / sum;
 			else if constexpr (roulette_type == CUSTOM)
-				roulette[idx] = (max - roulette[idx]) / sum + roulette[idx - 1];
+				roulette[idx] = (max - roulette[idx]) / (size*max - sum);
 			else if constexpr (roulette_type == MIN_MAX)
 				roulette[idx] = (roulette[idx] - min) / (max - min);
+			
+			roulette[idx] += roulette[idx - 1];
 
 			if(roulette[idx] < 0)
 			{
