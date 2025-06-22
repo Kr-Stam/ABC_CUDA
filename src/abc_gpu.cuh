@@ -7,6 +7,7 @@
 #include <cstdint>
 #include "utils.cuh"
 #include "problems/problems.h"
+#include "timer.cuh"
 
 namespace gpu{
 
@@ -530,6 +531,7 @@ namespace gpu{
 		uint32_t   dim,
 		uint32_t   BLOCK_SIZE,
 		uint32_t   COLONY_POOL,
+		uint32_t   iterations, 
 		Selection  selection_type,
 		Roulette   roulette_type,
 		Rank       rank_type,
@@ -542,7 +544,6 @@ namespace gpu{
 		float*   cords,
 		float*   values,
 		float*   hive_cords,
-		int      max_generations, 
 		int      trials_limit, 
 		opt_func optimization_function
 	)
@@ -658,7 +659,7 @@ namespace gpu{
 		//-----------------------------------------------------------------------//
 
 		//--------------------------------MAIN-LOOOP-----------------------------//
-		for(int i = 0; i < max_generations; i++)
+		for(int i = 0; i < iterations; i++)
 		{
 			//------------------EMPLOYED-BEE-LOCAL-OPTIMIZATION------------------//
 			//local_optimization<dim>(
@@ -950,9 +951,10 @@ namespace gpu{
 				 tmp_cords,
 				&sh_cords[choice*dim]
 			);
-			tmp_value = sh_values[choice];
+			//! specifichno tuka pravi nekoj problem optimizacijata
+			//tmp_value = sh_values[choice];
+			tmp_value = optimization_function(&sh_cords[choice*dim], dim);
 
-			__syncthreads();
 			if(sh_values[threadIdx.x] > tmp_value)
 			{
 				//#pragma unroll
@@ -1041,10 +1043,10 @@ namespace gpu{
 		}
 		//-----------------------------------------------------------------------//
 	}
+
 	/*
 	 * @brief Function pointer used to assign the needed optimization function
-	 * @details Due to the cpu and gpu memory spaces being separate, in order to
-	 *          pass a function pointer to the kernel, the CPU code must first
+	 * @details Due to the cpu and gpu memory spaces being separate, in order to pass a function pointer to the kernel, the CPU code must first
 	 *          copy the symbol location of a GPU assigned function pointer
 	 */
 	__device__ opt_func d_optimization_function = problems::gpu::rosenbrock;
@@ -1079,6 +1081,8 @@ namespace gpu{
 		uint32_t  dimensions,
 		uint32_t  grid_size,
 		uint32_t  block_size,
+		uint32_t  iterations,
+		uint32_t  trials_limit,
 		Selection selection_type,
 		Roulette  roulette_type,
 		Rank      rank_type,
@@ -1087,14 +1091,12 @@ namespace gpu{
 		uint32_t  tournament_num
 	>
 	void launch_abc(
-		float*   cords,
-		float*   values,
-		int      max_generations, 
-		int      trials_limit, 
-		opt_func optimization_function,
-		float    lower_bounds[],
-		float    upper_bounds[],
-		int      steps
+		float*    cords,
+		float*    values,
+		opt_func  optimization_function,
+		float     lower_bounds[],
+		float     upper_bounds[],
+		uint64_t* duration
 	)
 	{
 		float* d_cords;
@@ -1108,7 +1110,7 @@ namespace gpu{
 		size_t values_size = num_of_bees*sizeof(float);
 
 		size_t hive_cords_size =
-			dimensions*COLONY_POOL*grid_size*sizeof(float);
+			1000*dimensions*COLONY_POOL*grid_size*sizeof(float);
 
 		size_t bounds_size = dimensions  * sizeof(float);
 
@@ -1158,10 +1160,13 @@ namespace gpu{
 
 		cudaDeviceSynchronize();
 
+		Timer timer = Timer();
+		timer.start();
 		abc<
 			dimensions,
 			block_size,
 			COLONY_POOL,
+			iterations,
 			selection_type,
 			roulette_type,
 			rank_type,
@@ -1173,10 +1178,10 @@ namespace gpu{
 			d_cords,
 			d_values,
 			d_hive_cords,
-			max_generations,
 			trials_limit,
 			optimization_function
 		);
+		(*duration) = timer.stop();
 
 		cudaMemcpy(
 			cords,

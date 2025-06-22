@@ -432,7 +432,6 @@ namespace cpu
 		uint32_t    bees_count,
 		uint32_t    scouts_count,
 		uint32_t    trials_limit, 
-		bool        inverse,
 		Selection   selection_type,
 		Roulette    roulette_type,
 		RouletteCpu roulette_sorting,
