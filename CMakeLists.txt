@@ -91,10 +91,11 @@ add_executable(
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/abc_main.cuh"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/abc_cpu.cuh"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/abc_gpu.cu"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/abc_test.cuh"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/abc_test.cu"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/utils.cuh"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/main.cu"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/rank_array.cuh"
-	"${CMAKE_CURRENT_SOURCE_DIR}/src/magic_enum.hpp"
 	)
 
 # turn off matplotplusplus

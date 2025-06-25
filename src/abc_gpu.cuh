@@ -1,3 +1,16 @@
+/******************************************************************************
+ * @file abc_gpu.cuh                                                          *
+ * @brief Optimized CUDA implementation of the artificial bee colony algorithm*
+ * @details This header file contains a template function kernel that is      *
+ *          designed as a monolith kernel with conditional template compiling *
+ *          based on passed in parameters, which deterimine how the algorithm *
+ *          is implemented                                                    *
+ *                                                                            *
+ * @author Kristijan Stameski                                                 *
+ *****************************************************************************/
+
+#pragma once
+
 #include <curand_kernel.h>
 #include "problems/problems.h"
 #include "abc_main.cuh"
@@ -530,6 +543,7 @@ namespace gpu{
 	template<
 		uint32_t   dim,
 		uint32_t   BLOCK_SIZE,
+		uint32_t   GRID_SIZE,
 		uint32_t   COLONY_POOL,
 		uint32_t   iterations, 
 		Selection  selection_type,
@@ -576,7 +590,8 @@ namespace gpu{
 				//);
 				copy_cords<dim>(
 					&sh_cords[threadIdx.x*dim],
-					&hive_cords[(blockDim.x - blockIdx.x)*dim]
+					//&hive_cords[(blockDim.x - blockIdx.x)*dim]
+					&hive_cords[(GRID_SIZE - blockIdx.x)*dim]
 				);
 			}
 			else
@@ -1112,7 +1127,7 @@ namespace gpu{
 		size_t values_size = num_of_bees*sizeof(float);
 
 		size_t hive_cords_size =
-			1000*dimensions*COLONY_POOL*grid_size*sizeof(float);
+			dimensions*COLONY_POOL*grid_size*sizeof(float);
 
 		size_t bounds_size = dimensions  * sizeof(float);
 
@@ -1167,6 +1182,7 @@ namespace gpu{
 		abc<
 			dimensions,
 			block_size,
+			grid_size,
 			COLONY_POOL,
 			iterations,
 			selection_type,
@@ -1197,5 +1213,11 @@ namespace gpu{
 			values_size,
 			cudaMemcpyDeviceToHost
 		);
+
+		cudaFree(d_cords);
+		cudaFree(d_values);
+		cudaFree(d_hive_cords);
+
+		free(tmp_rank_arr);
 	}
 }
