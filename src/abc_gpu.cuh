@@ -601,8 +601,6 @@ namespace gpu{
 				&sh_cords[threadIdx.x*dim],
 				dim
 			);
-
-			__syncthreads();
 		}
 		//! ova sega za sega e sekogash so shared memory
 		else
@@ -614,6 +612,7 @@ namespace gpu{
 			sh_max      = sh_sum + blockDim.x;
 			sh_roulette = sh_max + blockDim.x;
 		}
+		__syncthreads();
 		//-----------------------------------------------------------------------//
 
 		//------------------------CURAND-INITIALIZATION--------------------------//
@@ -689,7 +688,6 @@ namespace gpu{
 			}
 
 			tmp_value = optimization_function(tmp_cords, dim);
-
 			if(tmp_value < sh_values[threadIdx.x])
 			{
 				sh_values[threadIdx.x] = tmp_value;
@@ -916,6 +914,10 @@ namespace gpu{
 					choice = rank_const::dev_exp<BLOCK_SIZE, 1, 20>(rand);
 				else if constexpr (rank_type == CONSTANT_EXPONENTIAL_2)
 					choice = rank_const::dev_exp2<BLOCK_SIZE, 1, 20>(rand);
+
+				//! ova e poradi toa shto CONSTANT_EXPONENTIAL ne e pravilno
+				//! napraven, 2 e okej
+				if (choice > BLOCK_SIZE) choice = 0;
 			}
 			else if constexpr (selection_type == TOURNAMENT)
 			{
@@ -952,8 +954,9 @@ namespace gpu{
 				&sh_cords[choice*dim]
 			);
 			//! specifichno tuka pravi nekoj problem optimizacijata
-			//tmp_value = sh_values[choice];
-			tmp_value = optimization_function(&sh_cords[choice*dim], dim);
+			tmp_value = sh_values[choice];
+			//tmp_value = optimization_function(&sh_cords[choice*dim], dim);
+			__syncthreads();
 
 			if(sh_values[threadIdx.x] > tmp_value)
 			{
@@ -978,7 +981,6 @@ namespace gpu{
 			{
 				trials++;
 			}
-			__syncthreads();
 			//-------------------------------------------------------------------//
 
 			//------------------------TRIAL-LIMIT-CHECK--------------------------//
@@ -1006,10 +1008,6 @@ namespace gpu{
 		}
 
 		//-----------------------------RETURN-VARIABLES--------------------------//
-		values[blockDim.x*blockIdx.x + threadIdx.x] = sh_values[threadIdx.x];
-		//values[blockDim.x*blockIdx.x + threadIdx.x] = 
-		//	optimization_function(&sh_cords[threadIdx.x], dim);
-
 		//#pragma unroll
 		//for(int i = 0; i < dim; i++)
 		//	cords[(blockDim.x*blockIdx.x + threadIdx.x)*dim + i] =
@@ -1023,6 +1021,10 @@ namespace gpu{
 			&cords[(blockDim.x*blockIdx.x + threadIdx.x)*dim],
 			&sh_cords[threadIdx.x*dim]
 		);
+	
+		//values[blockDim.x*blockIdx.x + threadIdx.x] = sh_values[threadIdx.x];
+		values[blockDim.x*blockIdx.x + threadIdx.x] = 
+			optimization_function(&sh_cords[threadIdx.x*dim], dim);
 
 		if (threadIdx.x < COLONY_POOL)
 		{
@@ -1139,7 +1141,7 @@ namespace gpu{
 		else if constexpr (rank_type == LINEAR_SIMPLE_ARRAY)
 			rank_arr::init_arr_simple<block_size>(tmp_rank_arr);
 		else if constexpr (rank_type == EXPONENTIAL_SIMPLE_ARRAY)
-			rank_arr::init_arr_simple_exp<tmp_rank_arr, block_size>(0.5f);
+			rank_arr::init_arr_simple_exp<block_size>(tmp_rank_arr, 0.5f);
 
 		cudaMemcpyToSymbol(rank_arr, tmp_rank_arr, rank_arr_size);
 		

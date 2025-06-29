@@ -94,6 +94,7 @@ add_executable(
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/utils.cuh"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/main.cu"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/rank_array.cuh"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/magic_enum.hpp"
 	)
 
 # turn off matplotplusplus

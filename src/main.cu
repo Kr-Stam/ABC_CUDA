@@ -16,7 +16,6 @@
 #include "problems/gpu/valley_shaped.cuh"
 #include "utils/array.hpp"
 #include "timer.cuh"
-#include "magic_enum.hpp"
 
 #include <filesystem>
 #include <cstdio>
@@ -103,8 +102,8 @@ template<
 >
 void abc_cpu_test(
 	opt_func optimization_function,
-	float    lower_bound[],
-	float    upper_bound[]
+	float    lower_bound[dimensions],
+	float    upper_bound[dimensions]
 )
 {
 	std::vector<cpu::Bee> bees(bees_count);
@@ -245,7 +244,6 @@ void abc_gpu_test(
 {
 	//variable initialization
 	int bees_count = grid_size*block_size;
-  	int max_trials = 20;
 
 	float* cords  = (float*) malloc(dimensions*bees_count*sizeof(float));
 	float* values = (float*) malloc(           bees_count*sizeof(float));
@@ -302,12 +300,12 @@ void abc_gpu_test(
 
 		int min_idx = 0;
 		float min_value = values[0];
-		for(int i = 1; i < bees_count; i++)
+		for(int j = 1; j < bees_count; j++)
 		{
-			if(values[i] < min_value)
+			if(values[j] < min_value)
 			{
-				min_value = values[i];
-				min_idx = i;
+				min_value = values[j];
+				min_idx = j;
 			}
 		}
 
@@ -322,66 +320,54 @@ void abc_gpu_test(
 
 		if (debug)
 		{
-			for(int i = 0; i < 10; i++)
+			for(int j = 0; j < 10; j++)
 			{
-				float min = values[i];
+				float min = values[j];
 				int min_idx;
-				for(int j = i; j < bees_count; j++)
+				for(int k = j; k < bees_count; k++)
 				{
-					if(min > values[j])
+					if(min > values[k])
 					{
-						min_idx = j;
-						min = values[j];
+						min_idx = k;
+						min = values[k];
 					}
 				}
-				float tmp = values[i];
-				values[i] = values[min_idx];
+				float tmp = values[j];
+				values[j] = values[min_idx];
 				values[min_idx] = tmp;
 
 				for(int k = 0; k < dimensions; k++)
 				{
-					tmp = cords[i*dimensions + k];
-					cords[i*dimensions + k] = cords[min_idx*dimensions + k];
+					tmp = cords[j*dimensions + k];
+					cords[j*dimensions + k] = cords[min_idx*dimensions + k];
 					cords[min_idx*dimensions + k] = tmp;
 				}
 
 			}
-			for(int i = 0; i < 10; i++)
+			for(int j = 0; j < 10; j++)
 			{
 				printf(
 					"Bee%03d: x=%f y=%f value=%f\n",
-					i,
-					cords[i*dimensions + 0],
-					cords[i*dimensions + 1],
-					values[i]
+					j,
+					cords[j*dimensions + 0],
+					cords[j*dimensions + 1],
+					values[j]
 				);
 			}
 		}
 	}
 }
 
-
+template<uint32_t dim>
 class RouletteWheelGpuTest
 {
-	static constexpr std::array<uint32_t, 1> dimensions_vals = {2};
 	static constexpr std::array<uint32_t, 1> trials_vals = {10};
-	//constexpr auto selection_vals = magic_enum::enum_values<Selection>();
-	static constexpr std::array<Selection, 1> selection_vals = {ROULETTE_WHEEL};
-	//constexpr auto roulette_vals = magic_enum::enum_values<Roulette>();
-	static constexpr std::array<Roulette, 1> roulette_vals   = {CUSTOM};
-	//constexpr auto rank_vals = magic_enum::enum_values<Rank>();
-	static constexpr std::array<Rank, 1> rank_vals   = {LINEAR_ARRAY};
-	//constexpr auto tourn_vals = magic_enum::enum_values<Tourn>();
-	static constexpr std::array<Tourn, 1> tourn_vals  = {SINGLE};
+	static constexpr std::array<Roulette, 3> roulette_vals = {SUM, CUSTOM, MIN_MAX};
 
-	static constexpr std::array<uint32_t, 1> tourn_size_vals = {4};
-	static constexpr std::array<uint32_t, 1> tourn_num_vals = {2};
 	static constexpr std::array<uint32_t, 1> block_vals = {512};
 	static constexpr std::array<uint32_t, 1> grid_vals = {100};
 	static constexpr std::array<uint32_t, 1> step_vals = {100};
 	static constexpr std::array<uint32_t, 1> iter_vals = {1000};
-	static constexpr std::array<bool, 1> debug_vals = {true};
-
 
 	template <typename F, std::size_t... I>
 	constexpr void for_each_index(std::index_sequence<I...>, F&& f) {
@@ -389,47 +375,347 @@ class RouletteWheelGpuTest
 	}
 
 public:
-	template <typename Func>
-	void for_all_combinations(Func&& func) {
-		for_each_index(std::make_index_sequence<dimensions_vals.size()>(), [&](auto i_dim) {
+	void for_all_combinations(
+			opt_func function,
+			float lower_bounds[dim], float upper_bounds[dim]
+	) {
 		for_each_index(std::make_index_sequence<trials_vals.size()>(), [&](auto i_trials) {
-		for_each_index(std::make_index_sequence<selection_vals.size()>(), [&](auto i_sel) {
 		for_each_index(std::make_index_sequence<roulette_vals.size()>(), [&](auto i_roul) {
-		for_each_index(std::make_index_sequence<rank_vals.size()>(), [&](auto i_rank) {
-		for_each_index(std::make_index_sequence<tourn_vals.size()>(), [&](auto i_tourn) {
-		for_each_index(std::make_index_sequence<tourn_size_vals.size()>(), [&](auto i_tsize) {
-		for_each_index(std::make_index_sequence<tourn_num_vals.size()>(), [&](auto i_tnum) {
 		for_each_index(std::make_index_sequence<block_vals.size()>(), [&](auto i_block) {
 		for_each_index(std::make_index_sequence<grid_vals.size()>(), [&](auto i_grid) {
 		for_each_index(std::make_index_sequence<step_vals.size()>(), [&](auto i_step) {
 		for_each_index(std::make_index_sequence<iter_vals.size()>(), [&](auto i_iter) {
-		for_each_index(std::make_index_sequence<debug_vals.size()>(), [&](auto i_debug) {
-
-			constexpr uint32_t dim  = dimensions_vals[i_dim];
 			constexpr uint32_t trial = trials_vals[i_trials];
-			constexpr Selection sel = selection_vals[i_sel];
 			constexpr Roulette roul = roulette_vals[i_roul];
-			constexpr Rank rank = rank_vals[i_rank];
-			constexpr Tourn tourn = tourn_vals[i_tourn];
-			constexpr uint32_t tsize = tourn_size_vals[i_tsize];
-			constexpr uint32_t tnum = tourn_num_vals[i_tnum];
 			constexpr uint32_t block = block_vals[i_block];
 			constexpr uint32_t grid = grid_vals[i_grid];
 			constexpr uint32_t step = step_vals[i_step];
 			constexpr uint32_t iter = iter_vals[i_iter];
-			constexpr bool dbg = debug_vals[i_debug];
-
-			// Declare dummy bounds for compile-time size
-			float lower_bounds[dim] = {-10, -10};
-			float upper_bounds[dim] = {+10, +10};
-			opt_func f = problems::gpu::rosenbrock; // supply actual function
 
 			abc_gpu_test<
-				dim, trial, sel, roul, rank, tourn,
-				tsize, tnum, block, grid, step, iter, dbg
-			>(f, lower_bounds, upper_bounds);
+				dim, trial, ROULETTE_WHEEL, roul, LINEAR_ARRAY, SINGLE,
+				0, 0, block, grid, step, iter, true
+			>(function, lower_bounds, upper_bounds);
 
-		}); }); }); }); }); }); }); }); }); }); }); }); });
+		}); }); }); }); }); });
+	}
+};
+
+template<uint32_t dim>
+class RankGpuTest
+{
+	static constexpr std::array<uint32_t, 1> trials_vals = {10};
+	static constexpr std::array<Rank, 7> rank_vals = {
+		LINEAR_ARRAY,
+		EXPONENTIAL_ARRAY,
+		LINEAR_SIMPLE_ARRAY,
+		EXPONENTIAL_SIMPLE_ARRAY,  
+		CONSTANT_LINEAR,
+		CONSTANT_EXPONENTIAL,
+		CONSTANT_EXPONENTIAL_2
+	};
+
+	static constexpr std::array<uint32_t, 1> block_vals = {512};
+	static constexpr std::array<uint32_t, 1> grid_vals = {100};
+	static constexpr std::array<uint32_t, 1> step_vals = {100};
+	static constexpr std::array<uint32_t, 1> iter_vals = {1000};
+
+	template <typename F, std::size_t... I>
+	constexpr void for_each_index(std::index_sequence<I...>, F&& f) {
+		(f(std::integral_constant<std::size_t, I>{}), ...);
+	}
+
+public:
+	void for_all_combinations(
+			opt_func function,
+			float lower_bounds[dim], float upper_bounds[dim]
+	) {
+		for_each_index(std::make_index_sequence<trials_vals.size()>(), [&](auto i_trials) {
+		for_each_index(std::make_index_sequence<rank_vals.size()>(), [&](auto i_rank) {
+		for_each_index(std::make_index_sequence<block_vals.size()>(), [&](auto i_block) {
+		for_each_index(std::make_index_sequence<grid_vals.size()>(), [&](auto i_grid) {
+		for_each_index(std::make_index_sequence<step_vals.size()>(), [&](auto i_step) {
+		for_each_index(std::make_index_sequence<iter_vals.size()>(), [&](auto i_iter) {
+			constexpr uint32_t trial = trials_vals[i_trials];
+			constexpr Rank rank = rank_vals[i_rank];
+			constexpr uint32_t block = block_vals[i_block];
+			constexpr uint32_t grid = grid_vals[i_grid];
+			constexpr uint32_t step = step_vals[i_step];
+			constexpr uint32_t iter = iter_vals[i_iter];
+
+			abc_gpu_test<
+				dim, trial, RANK, SUM, rank, SINGLE,
+				0, 0, block, grid, step, iter, true
+			>(function, lower_bounds, upper_bounds);
+
+		}); }); }); }); }); });
+	}
+};
+
+template<uint32_t dim>
+class TournamentGpuTestSingle
+{
+	static constexpr std::array<uint32_t, 4> tournament_sizes = {4, 8, 16, 32};
+
+	static constexpr std::array<uint32_t, 1> trials_vals = {10};
+	static constexpr std::array<uint32_t, 1> block_vals = {512};
+	static constexpr std::array<uint32_t, 1> grid_vals = {100};
+	static constexpr std::array<uint32_t, 1> step_vals = {100};
+	static constexpr std::array<uint32_t, 1> iter_vals = {1000};
+
+	template <typename F, std::size_t... I>
+	constexpr void for_each_index(std::index_sequence<I...>, F&& f) {
+		(f(std::integral_constant<std::size_t, I>{}), ...);
+	}
+
+public:
+	void for_all_combinations(
+			opt_func function,
+			float lower_bounds[dim], float upper_bounds[dim]
+	) {
+		for_each_index(std::make_index_sequence<tournament_sizes.size()>(), [&](auto i_tourn_size) {
+		for_each_index(std::make_index_sequence<trials_vals.size()>(), [&](auto i_trials) {
+		for_each_index(std::make_index_sequence<block_vals.size()>(), [&](auto i_block) {
+		for_each_index(std::make_index_sequence<grid_vals.size()>(), [&](auto i_grid) {
+		for_each_index(std::make_index_sequence<step_vals.size()>(), [&](auto i_step) {
+		for_each_index(std::make_index_sequence<iter_vals.size()>(), [&](auto i_iter) {
+
+			constexpr uint32_t tournament_size = tournament_sizes[i_tourn_size];
+
+			constexpr uint32_t trial = trials_vals[i_trials];
+			constexpr uint32_t block = block_vals[i_block];
+			constexpr uint32_t grid  = grid_vals[i_grid];
+			constexpr uint32_t step  = step_vals[i_step];
+			constexpr uint32_t iter  = iter_vals[i_iter];
+
+			abc_gpu_test<
+				dim, trial, TOURNAMENT, SUM, LINEAR_ARRAY, SINGLE,
+				tournament_size, 0, block, grid, step, iter, true
+			>(function, lower_bounds, upper_bounds);
+
+		}); }); }); }); }); });
+	}
+};
+
+template<uint32_t dim>
+class TournamentGpuTestMultiple
+{
+	static constexpr std::array<uint32_t, 4> tournament_sizes = {4, 8, 16, 32};
+	static constexpr std::array<uint32_t, 4> tournament_nums  = {2, 4, 8, 16};
+
+	static constexpr std::array<uint32_t, 1> trials_vals = {10};
+	static constexpr std::array<uint32_t, 1> block_vals = {512};
+	static constexpr std::array<uint32_t, 1> grid_vals = {100};
+	static constexpr std::array<uint32_t, 1> step_vals = {100};
+	static constexpr std::array<uint32_t, 1> iter_vals = {1000};
+
+	template <typename F, std::size_t... I>
+	constexpr void for_each_index(std::index_sequence<I...>, F&& f) {
+		(f(std::integral_constant<std::size_t, I>{}), ...);
+	}
+
+public:
+	void for_all_combinations(
+			opt_func function,
+			float lower_bounds[dim], float upper_bounds[dim]
+	) {
+		for_each_index(std::make_index_sequence<tournament_sizes.size()>(), [&](auto i_tourn_size) {
+		for_each_index(std::make_index_sequence<tournament_nums.size()>(), [&](auto i_tourn_num) {
+		for_each_index(std::make_index_sequence<trials_vals.size()>(), [&](auto i_trials) {
+		for_each_index(std::make_index_sequence<block_vals.size()>(), [&](auto i_block) {
+		for_each_index(std::make_index_sequence<grid_vals.size()>(), [&](auto i_grid) {
+		for_each_index(std::make_index_sequence<step_vals.size()>(), [&](auto i_step) {
+		for_each_index(std::make_index_sequence<iter_vals.size()>(), [&](auto i_iter) {
+
+			constexpr uint32_t tournament_size = tournament_sizes[i_tourn_size];
+			constexpr uint32_t tournament_num  = tournament_nums[i_tourn_num];
+
+			constexpr uint32_t trial = trials_vals[i_trials];
+			constexpr uint32_t block = block_vals[i_block];
+			constexpr uint32_t grid  = grid_vals[i_grid];
+			constexpr uint32_t step  = step_vals[i_step];
+			constexpr uint32_t iter  = iter_vals[i_iter];
+
+			abc_gpu_test<
+				dim, trial, TOURNAMENT, SUM, LINEAR_ARRAY, MULTIPLE,
+				tournament_size, tournament_num, block, grid, step, iter, true
+			>(function, lower_bounds, upper_bounds);
+
+		}); }); }); }); }); }); }); 
+	}
+};
+
+template<uint32_t dim>
+class RouletteCpuTest
+{
+	static constexpr std::array<uint32_t, 1> trials_vals = {10};
+	static constexpr std::array<Roulette, 3> roul_vals = {SUM, CUSTOM, MIN_MAX};
+	static constexpr std::array<RouletteCpu, 2> roul_sorting_vals = {FULL, PARTIAL_SORT};
+
+	static constexpr std::array<uint32_t, 1> bees_counts = {1000};
+	static constexpr std::array<uint32_t, 1> step_vals = {100};
+	static constexpr std::array<uint32_t, 1> iter_vals = {1000};
+
+	template <typename F, std::size_t... I>
+	constexpr void for_each_index(std::index_sequence<I...>, F&& f) {
+		(f(std::integral_constant<std::size_t, I>{}), ...);
+	}
+
+public:
+	void for_all_combinations(
+			opt_func function,
+			float lower_bounds[dim], float upper_bounds[dim]
+	) {
+		for_each_index(std::make_index_sequence<trials_vals.size()>(), [&](auto i_trials) {
+		for_each_index(std::make_index_sequence<roul_vals.size()>(), [&](auto i_roul) {
+		for_each_index(std::make_index_sequence<roul_sorting_vals.size()>(), [&](auto i_roul_sort) {
+		for_each_index(std::make_index_sequence<bees_counts.size()>(), [&](auto i_bees_count) {
+		for_each_index(std::make_index_sequence<step_vals.size()>(), [&](auto i_step) {
+		for_each_index(std::make_index_sequence<iter_vals.size()>(), [&](auto i_iter) {
+			constexpr uint32_t trial = trials_vals[i_trials];
+			constexpr Roulette roul = roul_vals[i_roul];
+			constexpr RouletteCpu roul_sort = roul_sorting_vals[i_roul_sort];
+			constexpr uint32_t bees_count = bees_counts[i_bees_count];
+			constexpr uint32_t step = step_vals[i_step];
+			constexpr uint32_t iter = iter_vals[i_iter];
+
+			abc_cpu_test<
+				dim, bees_count, bees_count/10, trial, ROULETTE_WHEEL, roul, roul_sort, LINEAR_ARRAY, SINGLE,
+				0, 0, iter, step, true
+			>(function, lower_bounds, upper_bounds);
+
+		}); }); }); }); }); });
+	}
+};
+
+template<uint32_t dim>
+class RankCpuTest
+{
+	static constexpr std::array<uint32_t, 1> trials_vals = {10};
+	static constexpr std::array<Rank, 7> rank_vals = {
+		LINEAR_ARRAY,
+		EXPONENTIAL_ARRAY,
+		LINEAR_SIMPLE_ARRAY,
+		EXPONENTIAL_SIMPLE_ARRAY,  
+		CONSTANT_LINEAR,
+		CONSTANT_EXPONENTIAL,
+		CONSTANT_EXPONENTIAL_2
+	};
+
+	static constexpr std::array<uint32_t, 1> bees_counts = {1000};
+	static constexpr std::array<uint32_t, 1> step_vals = {100};
+	static constexpr std::array<uint32_t, 1> iter_vals = {1000};
+
+	template <typename F, std::size_t... I>
+	constexpr void for_each_index(std::index_sequence<I...>, F&& f) {
+		(f(std::integral_constant<std::size_t, I>{}), ...);
+	}
+
+public:
+	void for_all_combinations(
+			opt_func function,
+			float lower_bounds[dim], float upper_bounds[dim]
+	) {
+		for_each_index(std::make_index_sequence<trials_vals.size()>(), [&](auto i_trials) {
+		for_each_index(std::make_index_sequence<rank_vals.size()>(), [&](auto i_rank) {
+		for_each_index(std::make_index_sequence<bees_counts.size()>(), [&](auto i_bees_count) {
+		for_each_index(std::make_index_sequence<step_vals.size()>(), [&](auto i_step) {
+		for_each_index(std::make_index_sequence<iter_vals.size()>(), [&](auto i_iter) {
+			constexpr uint32_t trial = trials_vals[i_trials];
+			constexpr Rank rank = rank_vals[i_rank];
+			constexpr uint32_t bees_count = bees_counts[i_bees_count];
+			constexpr uint32_t step = step_vals[i_step];
+			constexpr uint32_t iter = iter_vals[i_iter];
+
+			abc_cpu_test<
+				dim, bees_count, bees_count/10, trial, RANK, SUM, FULL, rank, SINGLE,
+				0, 0, iter, step, true
+			>(function, lower_bounds, upper_bounds);
+
+		}); }); }); }); });
+	}
+};
+
+template<uint32_t dim>
+class TournamentCpuTestSingle
+{
+	static constexpr std::array<uint32_t, 3> tournament_sizes = {4, 8, 16};
+
+	static constexpr std::array<uint32_t, 1> trials_vals = {10};
+	static constexpr std::array<uint32_t, 1> bees_counts = {1000};
+	static constexpr std::array<uint32_t, 1> step_vals = {100};
+	static constexpr std::array<uint32_t, 1> iter_vals = {1000};
+
+	template <typename F, std::size_t... I>
+	constexpr void for_each_index(std::index_sequence<I...>, F&& f) {
+		(f(std::integral_constant<std::size_t, I>{}), ...);
+	}
+
+public:
+	void for_all_combinations(
+			opt_func function,
+			float lower_bounds[dim], float upper_bounds[dim]
+	) {
+		for_each_index(std::make_index_sequence<trials_vals.size()>(), [&](auto i_trials) {
+		for_each_index(std::make_index_sequence<tournament_sizes.size()>(), [&](auto i_tourn_sizes) {
+		for_each_index(std::make_index_sequence<bees_counts.size()>(), [&](auto i_bees_count) {
+		for_each_index(std::make_index_sequence<step_vals.size()>(), [&](auto i_step) {
+		for_each_index(std::make_index_sequence<iter_vals.size()>(), [&](auto i_iter) {
+			constexpr uint32_t trial = trials_vals[i_trials];
+			constexpr uint32_t tournament_size = tournament_sizes[i_tourn_sizes];
+			constexpr uint32_t bees_count = bees_counts[i_bees_count];
+			constexpr uint32_t step = step_vals[i_step];
+			constexpr uint32_t iter = iter_vals[i_iter];
+
+			abc_cpu_test<
+				dim, bees_count, bees_count/10, trial, TOURNAMENT, SUM, FULL, LINEAR_ARRAY, SINGLE,
+				tournament_size, 0, iter, step, true
+			>(function, lower_bounds, upper_bounds);
+
+		}); }); }); }); });
+	}
+};
+
+template<uint32_t dim>
+class TournamentCpuTestMultiple
+{
+	static constexpr std::array<uint32_t, 3> tournament_sizes = {4, 8, 16};
+	static constexpr std::array<uint32_t, 3> tournament_nums  = {2, 4, 8};
+
+	static constexpr std::array<uint32_t, 1> trials_vals = {10};
+	static constexpr std::array<uint32_t, 1> bees_counts = {1000};
+	static constexpr std::array<uint32_t, 1> step_vals = {100};
+	static constexpr std::array<uint32_t, 1> iter_vals = {1000};
+
+	template <typename F, std::size_t... I>
+	constexpr void for_each_index(std::index_sequence<I...>, F&& f) {
+		(f(std::integral_constant<std::size_t, I>{}), ...);
+	}
+
+public:
+	void for_all_combinations(
+			opt_func function,
+			float lower_bounds[dim], float upper_bounds[dim]
+	) {
+		for_each_index(std::make_index_sequence<trials_vals.size()>(), [&](auto i_trials) {
+		for_each_index(std::make_index_sequence<tournament_sizes.size()>(), [&](auto i_tourn_sizes) {
+		for_each_index(std::make_index_sequence<tournament_nums.size()>(), [&](auto i_tourn_nums) {
+		for_each_index(std::make_index_sequence<bees_counts.size()>(), [&](auto i_bees_count) {
+		for_each_index(std::make_index_sequence<step_vals.size()>(), [&](auto i_step) {
+		for_each_index(std::make_index_sequence<iter_vals.size()>(), [&](auto i_iter) {
+			constexpr uint32_t trial = trials_vals[i_trials];
+			constexpr uint32_t tournament_size = tournament_sizes[i_tourn_sizes];
+			constexpr uint32_t tournament_num = tournament_nums[i_tourn_nums];
+			constexpr uint32_t bees_count = bees_counts[i_bees_count];
+			constexpr uint32_t step = step_vals[i_step];
+			constexpr uint32_t iter = iter_vals[i_iter];
+
+			abc_cpu_test<
+				dim, bees_count, bees_count/10, trial, TOURNAMENT, SUM, FULL, LINEAR_ARRAY, MULTIPLE,
+				tournament_size, tournament_num, iter, step, true
+			>(function, lower_bounds, upper_bounds);
+
+		}); }); }); }); }); });
 	}
 };
 
@@ -438,14 +724,11 @@ int main()
 	float lower_bounds[] = {-10, -10};
 	float upper_bounds[] = { 10,  10};
 
-	const int bees_count   = 1000;
-	const int trials_limit =   20;
-	const int dimensions   =    2;
 	//abc_cpu_test<
-	//	dimensions,
-	//	bees_count,
-	//	bees_count/10,
-	//	trials_limit,
+	//	2,
+	//	1000,
+	//	1000/10,
+	//	20,
 	//	//ROULETTE_WHEEL,
 	//	RANK,
 	//	CUSTOM,
@@ -453,37 +736,51 @@ int main()
 	//	//LINEAR_ARRAY,
 	//	CONSTANT_LINEAR,
 	//	SINGLE,
-	//	bees_count/10,
+	//	1000/10,
 	//	3,
+	//	1000,
 	//	100,
 	//	true
 	//>(
 	//	problems::cpu::rosenbrock,
 	//	lower_bounds,
-	//	upper_bounds,
-	//	1000
-	//);
-	//abc_gpu_test<
-	//	dimensions,
-	//	trials_limit,
-	//	ROULETTE_WHEEL,
-	//	CUSTOM,
-	//	CONSTANT_LINEAR,
-	//	SINGLE,
-	//	10,
-	//	3,
-	//	512,
-	//	100,
-	//	100,
-	//	1000,
-	//	true
-	//>(
-	//	problems::gpu::rosenbrock,
-	//	lower_bounds,
 	//	upper_bounds
-	//); 
-	//for_all_combinations([]{});
-	RouletteWheelGpuTest test = RouletteWheelGpuTest();
-	test.for_all_combinations([]{});
+	//);
+	abc_gpu_test<
+		2,
+		20,
+		RANK,
+		CUSTOM,
+		CONSTANT_LINEAR,
+		SINGLE,
+		10,
+		3,
+		512,
+		100,
+		100,
+		1000,
+		true
+	>(
+		problems::gpu::rosenbrock,
+		lower_bounds,
+		upper_bounds
+	); 
+	//RouletteWheelGpuTest roulette_test = RouletteWheelGpuTest<2>();
+	//roulette_test.for_all_combinations(problems::gpu::rosenbrock, lower_bounds, upper_bounds);
+	//RankGpuTest rank_test = RankGpuTest<2>();
+	//rank_test.for_all_combinations(problems::gpu::rosenbrock, lower_bounds, upper_bounds);
+	//TournamentGpuTestSingle tourn_single_test = TournamentGpuTestSingle<2>();
+	//tourn_single_test.for_all_combinations(problems::gpu::rosenbrock, lower_bounds, upper_bounds);
+	//TournamentGpuTestMultiple tourn_multiple_test = TournamentGpuTestMultiple<2>();
+	//tourn_multiple_test.for_all_combinations(problems::gpu::rosenbrock, lower_bounds, upper_bounds);
+	//RouletteCpuTest roulette_test = RouletteCpuTest<2>();
+	//roulette_test.for_all_combinations(problems::cpu::rosenbrock, lower_bounds, upper_bounds);
+	//RankCpuTest rank_test = RankCpuTest<2>();
+	//rank_test.for_all_combinations(problems::cpu::rosenbrock, lower_bounds, upper_bounds);
+	//TournamentCpuTestSingle tourn_single_test = TournamentCpuTestSingle<2>();
+	//tourn_single_test.for_all_combinations(problems::gpu::rosenbrock, lower_bounds, upper_bounds);
+//	TournamentCpuTestMultiple tourn_multiple_test = TournamentCpuTestMultiple<2>();
+//	tourn_multiple_test.for_all_combinations(problems::gpu::rosenbrock, lower_bounds, upper_bounds);
+
 	return 0;
 }
