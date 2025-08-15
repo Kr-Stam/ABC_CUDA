@@ -16,7 +16,7 @@
  * @param[in]  lower_bound lower bound of generated values 
  * @param[in]  upper_bound upper bound of generated values 
  * */
-void utils::array::generate_array(
+void utils::arr::generate_array(
 	double* arr,
 	int     n,
 	int     lower_bound, 
@@ -40,7 +40,7 @@ void utils::array::generate_array(
  * @param[out] B destination array
  * @param[in]  n number of elements to copy
  * */
-void utils::array::arr_copy(
+void utils::arr::arr_copy(
 	double* A,
 	double* B,
 	int     n
@@ -57,7 +57,7 @@ void utils::array::arr_copy(
  * @param[out] B
  * @param[in]  n number of elements to compare
  * */
-bool utils::array::arr_equals(
+bool utils::arr::arr_equals(
 	double* A,
 	double* B, 
 	int     n
@@ -75,7 +75,7 @@ bool utils::array::arr_equals(
  * @param[in]  arr  array to be printed
  * @param[in]  n    number of elements
  * */
-void utils::array::print_array_double(
+void utils::arr::print_array_double(
 	double* arr,
 	int     n
 )
@@ -95,7 +95,7 @@ void utils::array::print_array_double(
  * @param[in]  arr  array to be printed
  * @param[in]  n    number of elements
  * */
-void utils::array::print_array_float(
+void utils::arr::print_array_float(
 	float* arr,
 	int    n
 )
@@ -115,7 +115,7 @@ void utils::array::print_array_float(
  * @param[in]  arr  array to be printed
  * @param[in]  n    number of elements
  * */
-void utils::array::print_array_int(
+void utils::arr::print_array_int(
 	int* arr,
 	int  n
 )

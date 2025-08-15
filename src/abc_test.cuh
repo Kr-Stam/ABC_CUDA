@@ -15,8 +15,7 @@
 #include "abc_cpu.cuh"
 #include "abc_gpu.cuh"
 #include "problems/problems.h"
-#include "problems/gpu/many_local_minima.cuh"
-#include "problems/gpu/valley_shaped.cuh"
+#include "problems/problems_gpu.cuh"
 #include "timer.cuh"
 
 using namespace abc_shared;
@@ -38,11 +37,11 @@ constexpr std::array<char, MAX_TITLE_SIZE> create_title_cpu(
 		title.data(),
 		MAX_TITLE_SIZE,
 		"output/cpu/%s_%s_%s_%s_%s(%d_%d).csv",
-		SelectionTypeToString(selection_type),
-		RouletteTypeToString(roulette_type),
-		RouletteCpuToString(roulette_sorting),
-		RankTypeToString(rank_type),
-		TournamentTypeToString(tournament_type),
+		SelectionTypeToString(selection_type).data(),
+		RouletteTypeToString(roulette_type).data(),
+		RouletteCpuToString(roulette_sorting).data(),
+		RankTypeToString(rank_type).data(),
+		TournamentTypeToString(tournament_type).data(),
 		tournament_size,
 		tournament_num
 	);
@@ -51,14 +50,15 @@ constexpr std::array<char, MAX_TITLE_SIZE> create_title_cpu(
 }
 
 constexpr std::array<char, MAX_TITLE_SIZE> create_title_gpu(
-	Selection   selection_type   = ROULETTE_WHEEL,
-	Roulette    roulette_type    = CUSTOM,
-	Rank        rank_type        = LINEAR_ARRAY,
-	Tourn       tournament_type  = SINGLE,
-	uint32_t    tournament_size  = 10,
-	uint32_t    tournament_num   = 2,
-	uint32_t    grid_size        = 0,
-	uint32_t    block_size       = 0
+	uint32_t  trials_limit,
+	Selection selection_type   = ROULETTE_WHEEL,
+	Roulette  roulette_type    = CUSTOM,
+	Rank      rank_type        = LINEAR_ARRAY,
+	Tourn     tournament_type  = SINGLE,
+	uint32_t  tournament_size  = 10,
+	uint32_t  tournament_num   = 2,
+	uint32_t  grid_size        = 0,
+	uint32_t  block_size       = 0
 )
 {
 	std::array<char, MAX_TITLE_SIZE> title = { };
@@ -69,8 +69,9 @@ constexpr std::array<char, MAX_TITLE_SIZE> create_title_gpu(
 		snprintf(
 			title.data(),
 			MAX_TITLE_SIZE,
-			"output/gpu/roulette/%s_(%dx%d).csv",
-			RouletteTypeToString(roulette_type),
+			"%s_[%d]_(%dx%d).csv",
+			RouletteTypeToString(roulette_type).data(),
+			trials_limit,
 			grid_size,
 			block_size
 		);
@@ -79,8 +80,9 @@ constexpr std::array<char, MAX_TITLE_SIZE> create_title_gpu(
 		snprintf(
 			title.data(),
 			MAX_TITLE_SIZE,
-			"output/gpu/rank/%s_(%dx%d).csv",
-			RankTypeToString(rank_type),
+			"%s_[%d]_(%dx%d).csv",
+			RankTypeToString(rank_type).data(),
+			trials_limit,
 			grid_size,
 			block_size
 		);
@@ -89,8 +91,9 @@ constexpr std::array<char, MAX_TITLE_SIZE> create_title_gpu(
 		snprintf(
 			title.data(),
 			MAX_TITLE_SIZE,
-			"output/gpu/tournament/%s(%dx%d)_(%dx%d).csv",
-			TournamentTypeToString(tournament_type),
+			"%s_[%d]_(%dx%d)_(%dx%d).csv",
+			TournamentTypeToString(tournament_type).data(),
+			trials_limit,
 			tournament_size,
 			tournament_num,
 			grid_size,
@@ -202,7 +205,7 @@ void abc_cpu_test(
 			scouts_count
 		);
 
-		if (debug)
+		if(debug)
 		{
 			printf("Iteration #%03d Time %ld: ", i*step_size, duration);
 			for(int j = 0; j <= dimensions; j++)
@@ -214,7 +217,7 @@ void abc_cpu_test(
 
 	std::fclose(file);
 
-	if (debug)
+	if(debug)
 	{
 		printf("Done...\n");
 
@@ -238,71 +241,120 @@ void abc_cpu_test(
 	}
 }
 
-template<
-	uint32_t    dimensions,
-	uint32_t    trials_limit, 
-	Selection   selection_type,
-	Roulette    roulette_type,
-	Rank        rank_type,
-	Tourn       tournament_type,
-	uint32_t    tournament_size,
-	uint32_t    tournament_num,
-	//gpu
-	uint32_t    block_size,
-	uint32_t    grid_size,
-	//dodatno
-	uint32_t    step_size,
-	uint32_t    iterations,
-	bool        debug
->
-void abc_gpu_test(
-	opt_func optimization_problem,
-	float lower_bounds[dimensions],
-	float upper_bounds[dimensions]
+void ensure_created(std::string dir)
+{
+	if (!std::filesystem::exists(dir))
+		std::filesystem::create_directory(dir);
+}
+
+inline float calc_error(float global_min_value, float min_value)
+{
+	return abs(global_min_value - min_value);
+}
+
+template<unsigned int dim>
+inline float calc_param_convergence(
+	SolutionParams<dim> global_min_params,
+	float min_value[dim]
 )
 {
+	float result = INFINITY;
+	for(int i = 0; i < global_min_params.num_of_solutions; i++)
+	{
+		float tmp_result = 0;
+		for(int j = 0; j < dim; j++)
+		{
+			float tmp = global_min_params.solutions[i][j] - min_value[j];
+			tmp_result += tmp*tmp;
+		}
+		if (tmp_result < result) result = tmp_result;
+	}
+	return result;
+}
+
+inline float calc_grad_norm(float min_value, float prev_min_value)
+{
+	float tmp = (prev_min_value - min_value); 
+	return tmp*tmp;
+}
+
+template<
+	uint32_t  dim,
+	uint32_t  trials_limit, 
+	Selection selection_type,
+	Roulette  roulette_type,
+	Rank      rank_type,
+	Tourn     tournament_type,
+	uint32_t  tournament_size,
+	uint32_t  tournament_num,
+	//gpu
+	uint32_t  block_size,
+	uint32_t  grid_size,
+	uint32_t  step_size,
+	uint32_t  iterations,
+	bool      debug
+>
+void abc_gpu_test(
+	TestFunc  test_function
+)
+{
+	std::string out_path;
+	{ // create out_path
+		out_path = "output";
+		ensure_created(out_path);
+		out_path.append("/gpu");
+		ensure_created(out_path);
+		std::string func_type_str = TestFuncToString(test_function).data();
+		out_path.append("/");
+		out_path.append(func_type_str);
+		ensure_created(out_path);
+		std::string sel_type_str = SelectionTypeToString(selection_type).data();
+		out_path.append("/");
+		out_path.append(sel_type_str);
+		ensure_created(out_path);
+		out_path.append("/");
+		std::array<char, MAX_TITLE_SIZE> title = create_title_gpu(
+			trials_limit,
+			selection_type,
+			roulette_type,
+			rank_type,
+			tournament_type,
+			tournament_size,
+			tournament_num,
+			grid_size,
+			block_size
+		);
+		out_path.append(title.data());
+	}
+
+	FILE* file = std::fopen(out_path.data(), "w");
+	std::fprintf(
+		file,
+		"duration;iterations;min_value;error;param_convergence;grad_norm\n"
+	);
+	
 	//variable initialization
 	int bees_count = grid_size*block_size;
 
-	float* cords  = (float*) malloc(dimensions*bees_count*sizeof(float));
+	float lower_bounds[dim] = { };
+	float upper_bounds[dim] = { };
+	GetBounds<dim >(test_function, lower_bounds, upper_bounds);
+
+	float* cords  = (float*) malloc(dim*bees_count*sizeof(float));
 	float* values = (float*) malloc(           bees_count*sizeof(float));
 
-	if (!std::filesystem::exists("output"))
-		std::filesystem::create_directory("output");
-	if (!std::filesystem::exists("output/gpu"))
-		std::filesystem::create_directory("output/gpu");
-	if (!std::filesystem::exists("output/gpu/roulette"))
-		std::filesystem::create_directory("output/gpu/roulette");
-	if (!std::filesystem::exists("output/gpu/tournament"))
-		std::filesystem::create_directory("output/gpu/tournament");
-	if (!std::filesystem::exists("output/gpu/rank"))
-		std::filesystem::create_directory("output/gpu/rank");
-
-	std::array<char, MAX_TITLE_SIZE> title = create_title_gpu(
-		selection_type,
-		roulette_type,
-		rank_type,
-		tournament_type,
-		tournament_size,
-		tournament_num,
-		grid_size,
-		block_size
-	);
-
-	FILE *file = std::fopen(title.data(), "w");
-
-	std::fprintf(
-		file,
-		"duration;iterations;min_value;bees_count;\n"
-	);
-
 	int num_of_steps = iterations / step_size;
+	float prev_min_value;
+
+	float global_min_value = GetGlobalMinValue(test_function);
+	SolutionParams global_min_params = GetGlobalMinParams<dim>(test_function);
+
 	for(int i = 0; i < num_of_steps; i++)
 	{
 		uint64_t duration;
 		gpu::launch_abc
 		<
-			dimensions,
+			dim,
 			grid_size,
 			block_size,
 			iterations,
@@ -317,69 +369,83 @@ void abc_gpu_test(
 		(
 			cords,
 			values,
-			optimization_problem,
+			test_function,
 			lower_bounds,
 			upper_bounds,
 			&duration
 		);
 
+
+		//Find minimum
 		int min_idx = 0;
 		float min_value = values[0];
 		for(int j = 1; j < bees_count; j++)
 		{
-			if(values[j] < min_value)
+			if(min_value > values[j])
 			{
 				min_value = values[j];
 				min_idx = j;
 			}
 		}
 
+		float error = calc_error(global_min_value, min_value);
+		float param_convergence = calc_param_convergence<dim>(
+			global_min_params,
+			&cords[min_idx]
+		);
+		float grad_norm = calc_grad_norm(min_value, prev_min_value); 
 		std::fprintf(
 			file,
-			"%ld;%d;%f;%d\n",
+			"%ld;%d;%f;%f;%f;%f\n",
 			duration,
 			i*step_size,
 			min_value,
-			bees_count
+			error,
+			param_convergence,
+			grad_norm
 		);
+		prev_min_value = min_value;
 
-		if (debug)
-		{
-			for(int j = 0; j < 10; j++)
+		{ // write to stdout
+			if(debug)
 			{
-				float min = values[j];
-				int min_idx;
-				for(int k = j; k < bees_count; k++)
+				for(int j = 0; j < 10; j++)
 				{
-					if(min > values[k])
+					float min = values[j];
+					int min_idx = j;
+					for(int k = j + 1; k < bees_count; k++)
 					{
-						min_idx = k;
-						min = values[k];
+						if(min > values[k])
+						{
+							min_idx = k;
+							min = values[k];
+						}
 					}
-				}
-				float tmp = values[j];
-				values[j] = values[min_idx];
-				values[min_idx] = tmp;
 
-				for(int k = 0; k < dimensions; k++)
+					for(int k = 0; k < dim; k++)
+					{
+						float tmp = cords[min_idx*dim + k];
+						cords[min_idx*dim + k] = cords[j*dim + k];
+						cords[j*dim + k] = tmp;
+					}
+					values[min_idx] = values[j];
+					values[j] = min;
+				}
+				for(int j = 0; j < 10; j++)
 				{
-					tmp = cords[j*dimensions + k];
-					cords[j*dimensions + k] = cords[min_idx*dimensions + k];
-					cords[min_idx*dimensions + k] = tmp;
+					printf(
+						"Bee%03d: x=%f y=%f value=%f\n",
+						j,
+						cords[j*dim + 0],
+						cords[j*dim + 1],
+						values[j]
+					);
 				}
-
-			}
-			for(int j = 0; j < 10; j++)
-			{
-				printf(
-					"Bee%03d: x=%f y=%f value=%f\n",
-					j,
-					cords[j*dimensions + 0],
-					cords[j*dimensions + 1],
-					values[j]
-				);
 			}
 		}
+
+		#define EPS 1.0E-8
+		if (error < EPS && param_convergence < EPS && grad_norm < EPS) break;
 	}
 
 	free(cords);
@@ -389,15 +455,23 @@ void abc_gpu_test(
 class GpuTestBase
 {
 public:
-	static constexpr std::array<uint32_t, 1> trials_vals = {10};
-	static constexpr std::array<uint32_t, 1> step_vals   = {10};
+	static constexpr std::array<uint32_t, 3> trials_vals = {
+		10, 20, 30
+	};
+	static constexpr std::array<uint32_t, 1> step_vals   = {
+		10 
+	};
 
-	static constexpr std::array<uint32_t, 4> block_vals = {64, 128, 256, 512 };
-	//static constexpr std::array<uint32_t, 1> block_vals = {256};
-	static constexpr std::array<uint32_t, 3> grid_vals = {1, 10, 100};
+	static constexpr std::array<uint32_t, 5> block_vals = {
+		32, 64, 128, 256, 512 
+	};
+	static constexpr std::array<uint32_t, 3> grid_vals = { 5, 10, 100 };
 };
 
-template<uint32_t dim, uint32_t max_iterations>
+template<
+	uint32_t dim,
+	uint32_t max_iterations
+>
 class RouletteWheelGpuTest : private GpuTestBase
 {
 	static constexpr std::array<Roulette, 3> roulette_vals = {SUM, CUSTOM, MIN_MAX};
@@ -409,7 +483,7 @@ class RouletteWheelGpuTest : private GpuTestBase
 
 public:
 	void for_all_combinations(
-			opt_func function,
+			TestFunc test_function,
 			float lower_bounds[dim], float upper_bounds[dim]
 	) {
 		for_each_index(std::make_index_sequence<trials_vals.size()>(), [&](auto i_trials) {
@@ -426,13 +500,17 @@ public:
 			abc_gpu_test<
 				dim, trial, ROULETTE_WHEEL, roul, LINEAR_ARRAY, SINGLE,
 				0, 0, block, grid, step, max_iterations, true
-			>(function, lower_bounds, upper_bounds);
+			>(test_function);
 
 		}); }); }); }); });
 	}
 };
 
-template<uint32_t dim, uint32_t max_iterations>
+template<
+	uint32_t dim,
+	uint32_t max_iterations,
+	TestFunc test_function
+>
 class RankGpuTest : private GpuTestBase
 {
 	static constexpr std::array<Rank, 7> rank_vals = {
@@ -469,13 +547,17 @@ public:
 			abc_gpu_test<
 				dim, trial, RANK, SUM, rank, SINGLE,
 				0, 0, block, grid, step, max_iterations, true
-			>(function, lower_bounds, upper_bounds);
+			>(test_function);
 
 		}); }); }); }); });
 	}
 };
 
-template<uint32_t dim, uint32_t max_iterations>
+template<
+	uint32_t dim,
+	uint32_t max_iterations,
+	TestFunc test_function
+>
 class TournamentGpuTestSingle : private GpuTestBase
 {
 	static constexpr std::array<uint32_t, 4> tournament_sizes = {4, 8, 16, 32};
@@ -505,14 +587,19 @@ public:
 
 			abc_gpu_test<
 				dim, trial, TOURNAMENT, SUM, LINEAR_ARRAY, SINGLE,
-				tournament_size, 0, block, grid, step, max_iterations, true
-			>(function, lower_bounds, upper_bounds);
+				tournament_size, 0, block, grid, step, max_iterations,
+				true
+			>(test_function);
 
 		}); }); }); }); });
 	}
 };
 
-template<uint32_t dim, uint32_t max_iterations>
+template<
+	uint32_t dim,
+	uint32_t max_iterations,
+	TestFunc test_function
+>
 class TournamentGpuTestMultiple : private GpuTestBase
 {
 	static constexpr std::array<uint32_t, 4> tournament_sizes = {4, 8, 16, 32};
@@ -545,8 +632,9 @@ public:
 
 			abc_gpu_test<
 				dim, trial, TOURNAMENT, SUM, LINEAR_ARRAY, MULTIPLE,
-				tournament_size, tournament_num, block, grid, step, max_iterations, true
-			>(function, lower_bounds, upper_bounds);
+				tournament_size, tournament_num, block, grid, step, 
+				max_iterations, test_function, true
+			>(test_function);
 
 		}); }); }); }); }); });
 	}

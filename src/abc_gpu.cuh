@@ -15,7 +15,7 @@
 #include "problems/problems.h"
 #include "abc_main.cuh"
 #include "rank_array.cuh"
-#include "problems/gpu/valley_shaped.cuh"
+#include "problems/problems_gpu.cuh"
 #include <math.h>
 #include <cstdint>
 #include "utils.cuh"
@@ -579,15 +579,6 @@ namespace gpu{
 			if (threadIdx.x < COLONY_POOL)
 			{
 				//Load values into shared memory
-				//#pragma unroll
-				//for(int i = 0; i < dim; i++)
-				//	sh_cords[threadIdx.x*dim + i] =
-				//		hive_cords[(blockIdx.x*COLONY_SIZE + threadIdx.x)*dim + i];
-				//memcpy(
-				//	&sh_cords[threadIdx.x*dim],
-				//	&hive_cords[threadIdx.x*dim],
-				//	dim*sizeof(float)
-				//);
 				copy_cords<dim>(
 					&sh_cords[threadIdx.x*dim],
 					//&hive_cords[(blockDim.x - blockIdx.x)*dim]
@@ -597,15 +588,6 @@ namespace gpu{
 			else
 			{
 				//Load values into shared memory
-				//#pragma unroll
-				//for(int i = 0; i < dim; i++)
-				//	sh_cords[threadIdx.x*dim + i] =
-				//		cords[(blockDim.x*blockIdx.x + threadIdx.x)*dim + i];
-				//memcpy(
-				//	&sh_cords[threadIdx.x*dim],
-				//	&cords[(blockDim.x*blockIdx.x + threadIdx.x)*dim],
-				//	dim*sizeof(float)
-				//);
 				copy_cords<dim>(
 					&sh_cords[threadIdx.x*dim],
 					&cords[(blockDim.x*blockIdx.x + threadIdx.x)*dim]
@@ -636,13 +618,6 @@ namespace gpu{
 		//-----------------------------------------------------------------------//
 
 		//----------------------INITIALIZE-INITIAL-STATE-------------------------//
-		//generate_random_solution<dim>(
-		//		sh_cords,
-		//		sh_values,
-		//		threadIdx.x,
-		//		optimization_function,
-		//		&state
-		//);
 		float tmp_cords[dim];
 		float tmp_value;
 		#pragma unroll
@@ -654,14 +629,7 @@ namespace gpu{
 		if(tmp_value < sh_values[threadIdx.x])
 		{
 			sh_values[threadIdx.x] = tmp_value;
-			//#pragma unroll
-			//for(int i = 0; i < dim; i++)
-			//	sh_cords[threadIdx.x*dim + i] = tmp_cords[i];
-			//memcpy(
-			//	&sh_cords[threadIdx.x*dim],
-			//	tmp_cords,
-			//	dim*sizeof(float)
-			//);
+			//!!!
 			copy_cords<dim>(
 				&sh_cords[threadIdx.x*dim],
 				tmp_cords
@@ -676,22 +644,11 @@ namespace gpu{
 		for(int i = 0; i < iterations; i++)
 		{
 			//------------------EMPLOYED-BEE-LOCAL-OPTIMIZATION------------------//
-			//local_optimization<dim>(
-			//	threadIdx.x,
-			//	sh_cords,
-			//	sh_values,
-			//	&trials,
-			//	optimization_function,
-			//	&state
-			//);
 			int choice;
 			choice = curand_uniform(&state) * BLOCK_SIZE;
 
 			for(int i = 0; i < dim; i++)
 			{
-				//tmp_cords[i] = fast_clip_float(
-				//	tmp_cords[i],
-				//);
 				tmp_cords[i] = sh_cords[threadIdx.x*dim + i] +
 					(sh_cords[threadIdx.x*dim + i] - sh_cords[choice*dim + i]) *
 					curand_uniform(&state);
@@ -706,14 +663,7 @@ namespace gpu{
 			if(tmp_value < sh_values[threadIdx.x])
 			{
 				sh_values[threadIdx.x] = tmp_value;
-				//#pragma unroll
-				//for(int i = 0; i < dim; i++)
-				//	sh_cords[threadIdx.x*dim + i] = tmp_cords[i];
-				//memcpy(
-				//	&sh_cords[threadIdx.x*dim],
-				//	tmp_cords,
-				//	dim*sizeof(float)
-				//);
+				//!!!
 				copy_cords<dim>(
 					&sh_cords[threadIdx.x*dim],
 					tmp_cords
@@ -729,7 +679,7 @@ namespace gpu{
 			//-------------------------------------------------------------------//
 
 			//------------------ONLOOKER-BEE-GLOBAL-OPTIMIZATION-----------------//
-			//! celoto e staveno tuka radi registri, preku glava mi e
+			// the selection is inlined to reduce register usage in the kernel
 			if constexpr (selection_type == ROULETTE_WHEEL)
 			{
 				if constexpr (roulette_type  == SUM)
@@ -762,10 +712,11 @@ namespace gpu{
 						__syncthreads();
 					}
 
-					if(threadIdx.x < 32) 
+					if(threadIdx.x < 32)
+					{
 						warp_reduce_sum<BLOCK_SIZE>(sh_sum, threadIdx.x);
-					if(threadIdx.x < 32) 
 						warp_reduce_max<BLOCK_SIZE>(sh_max, threadIdx.x);
+					}
 
 					__syncthreads();
 
@@ -819,10 +770,11 @@ namespace gpu{
 						__syncthreads();
 					}
 
-					if(threadIdx.x < 32) 
+					if(threadIdx.x < 32)
+					{
 						warp_reduce_sum<BLOCK_SIZE>(sh_sum, threadIdx.x);
-					if(threadIdx.x < 32) 
 						warp_reduce_max<BLOCK_SIZE>(sh_max, threadIdx.x);
+					}
 
 					__syncthreads();
 
@@ -883,10 +835,11 @@ namespace gpu{
 						__syncthreads();
 					}
 
-					if(threadIdx.x < 32) 
+					if(threadIdx.x < 32)
+					{
 						warp_reduce_sum<BLOCK_SIZE>(sh_min, threadIdx.x);
-					if(threadIdx.x < 32) 
 						warp_reduce_max<BLOCK_SIZE>(sh_max, threadIdx.x);
+					}
 
 					__syncthreads();
 
@@ -964,31 +917,30 @@ namespace gpu{
 			}
 
 			//! radi sinhronizacija
+			//!!!
 			copy_cords<dim>(
 				 tmp_cords,
 				&sh_cords[choice*dim]
 			);
+			for(int i = 0; i < dim; i++)
+			{
+				if(tmp_cords[i] > c_upper_bounds[i])
+					tmp_cords[i] = c_upper_bounds[i];
+				if(tmp_cords[i] < c_lower_bounds[i])
+					tmp_cords[i] = c_lower_bounds[i];
+			}
 			//! specifichno tuka pravi nekoj problem optimizacijata
-			tmp_value = sh_values[choice];
+			//tmp_value = sh_values[choice];
 			//tmp_value = optimization_function(&sh_cords[choice*dim], dim);
-			__syncthreads();
+			tmp_value = optimization_function(tmp_cords, dim);
 
 			if(sh_values[threadIdx.x] > tmp_value)
 			{
-				//#pragma unroll
-				//for(int i = 0; i < dim; i++)
-				//	sh_cords[threadIdx.x*dim + i] = sh_cords[choice*dim + i];
-				//memcpy(
-				//	&sh_cords[threadIdx.x*dim],
-				//	&sh_cords[choice*dim],
-				//	dim*sizeof(float)
-				//);
 				copy_cords<dim>(
 					&sh_cords[threadIdx.x*dim],
 					 tmp_cords
 				);
 				sh_values[threadIdx.x] = tmp_value;
-				//sh_values[threadIdx.x] = optimization_function(tmp_cords, dim);
 
 				trials = 0;
 			}
@@ -1001,18 +953,18 @@ namespace gpu{
 			//------------------------TRIAL-LIMIT-CHECK--------------------------//
 			if(trials > trials_limit)
 			{
-				//generate_random_solution<dim>(
-				//	sh_cords,
-				//	sh_values,
-				//	threadIdx.x,
-				//	optimization_function,
-				//	&state
-				//);
 				#pragma unroll
 				for(int i = 0; i < dim; i++)
+				{
 					sh_cords[threadIdx.x*dim+i] = curand_uniform(&state) *
 						(c_upper_bounds[i] - c_lower_bounds[i]);
+					if(sh_cords[threadIdx.x*dim+i] > c_upper_bounds[i])
+						sh_cords[threadIdx.x*dim+i] = c_upper_bounds[i];
+					if(sh_cords[threadIdx.x*dim+i] < c_lower_bounds[i])
+						sh_cords[threadIdx.x*dim+i] = c_lower_bounds[i];
+				}
 
+				//!!!
 				sh_values[threadIdx.x] = optimization_function(
 					&sh_cords[threadIdx.x*dim],
 					dim
@@ -1023,15 +975,6 @@ namespace gpu{
 		}
 
 		//-----------------------------RETURN-VARIABLES--------------------------//
-		//#pragma unroll
-		//for(int i = 0; i < dim; i++)
-		//	cords[(blockDim.x*blockIdx.x + threadIdx.x)*dim + i] =
-		//		sh_cords[threadIdx.x*dim + i];
-		//memcpy(
-		//	&cords[(blockDim.x*blockIdx.x + threadIdx.x)*dim],
-		//	&sh_cords[threadIdx.x*dim],
-		//	dim*sizeof(float)
-		//);
 		copy_cords<dim>(
 			&cords[(blockDim.x*blockIdx.x + threadIdx.x)*dim],
 			&sh_cords[threadIdx.x*dim]
@@ -1044,15 +987,6 @@ namespace gpu{
 		if (threadIdx.x < COLONY_POOL)
 		{
 			//Load values into shared memory
-			//#pragma unroll
-			//for(int i = 0; i < dim; i++)
-			//	hive_cords[(blockIdx.x + threadIdx.x)*dim + i] =
-			//		sh_cords[threadIdx.x*dim + i];
-			//memcpy(
-			//	&hive_cords[(blockIdx.x + threadIdx.x)*dim],
-			//	&sh_cords[threadIdx.x*dim],
-			//	dim*sizeof(float)
-			//);
 			copy_cords<dim>(
 				&hive_cords[(blockIdx.x*COLONY_POOL + threadIdx.x)*dim],
 				&sh_cords[threadIdx.x*dim]
@@ -1062,17 +996,26 @@ namespace gpu{
 	}
 
 	/*
-	 * @brief Function pointer used to assign the needed optimization function
-	 * @details Due to the cpu and gpu memory spaces being separate, in order to pass a function pointer to the kernel, the CPU code must first
-	 *          copy the symbol location of a GPU assigned function pointer
+	 * @brief Function pointers used to assign the optimization function
+	 * @details
+	 * Due to the cpu and gpu memory spaces being separate,
+	 * in order to pass a function pointer to the kernel,
+	 * the CPU code must first	copy the symbol location of a GPU
+	 * assigned function pointer
 	 */
-	__device__ opt_func d_optimization_function = problems::gpu::rosenbrock;
+	__device__ opt_func d_rosenbrock     = problems::gpu::rosenbrock;
+	__device__ opt_func d_cross_in_tray  = problems::gpu::cross_in_tray;
+	__device__ opt_func d_schaffer2      = problems::gpu::schaffer2;
+	__device__ opt_func d_schaffer4      = problems::gpu::schaffer4;
+	__device__ opt_func d_bohachevsky1   = problems::gpu::bohachevsky1;
+	__device__ opt_func d_bohachevsky2   = problems::gpu::bohachevsky2;
+	__device__ opt_func d_bohachevsky3   = problems::gpu::bohachevsky3;
+	__device__ opt_func d_schwefel       = problems::gpu::schwefel;
 	
-	//TODO: Treba funkcijava da se prefrli vo template i da se implementira
-	//      funkcionalnosta na logiranje strukturirani csv podatoci na sekoj step
+	#define COLONY_POOL 4
 
 	/*
-	 * @brief Function used to launch the parallel GPU version of the ABC algorithm
+	 * @brief Function used to launch the GPU version of the ABC algorithm
 	 * 
 	 * @param[out] cords    array of potential solutions cords 
 	 * @param[out] values         array of potential solutions fitness values 
@@ -1092,8 +1035,6 @@ namespace gpu{
 	 *          inter-block communication and probes the state of the bee colony
 	 *          at a set number of steps
 	 */
-	//TODO: odkomentirano deka me mrzi da go prefrlam vo headerot sega za sega
-	#define COLONY_POOL 4
 	template<
 		uint32_t  dimensions,
 		uint32_t  grid_size,
@@ -1110,7 +1051,7 @@ namespace gpu{
 	void launch_abc(
 		float*    cords,
 		float*    values,
-		opt_func  optimization_function,
+		TestFunc  test_function,
 		float     lower_bounds[],
 		float     upper_bounds[],
 		uint64_t* duration
@@ -1160,13 +1101,84 @@ namespace gpu{
 
 		cudaMemcpyToSymbol(rank_arr, tmp_rank_arr, rank_arr_size);
 		
-		cudaMemcpyFromSymbol(
-			&optimization_function,
-			d_optimization_function,
-			sizeof(opt_func),
-			0,
-			cudaMemcpyDeviceToHost
-		);
+		opt_func d_symbol;
+		switch(test_function)
+		{
+		case ROSENBROCK:
+			cudaMemcpyFromSymbol(
+				&d_symbol,
+				d_rosenbrock,
+				sizeof(opt_func),
+				0,
+				cudaMemcpyDeviceToHost
+			);
+			break;
+		case CROSS_IN_TRAY:
+			cudaMemcpyFromSymbol(
+				&d_symbol,
+				d_cross_in_tray,
+				sizeof(opt_func),
+				0,
+				cudaMemcpyDeviceToHost
+			);
+			break;
+		case SCHAFFER_2:
+			cudaMemcpyFromSymbol(
+				&d_symbol,
+				d_schaffer2,
+				sizeof(opt_func),
+				0,
+				cudaMemcpyDeviceToHost
+			);
+			break;
+		case SCHAFFER_4:
+			cudaMemcpyFromSymbol(
+				&d_symbol,
+				d_schaffer4,
+				sizeof(opt_func),
+				0,
+				cudaMemcpyDeviceToHost
+			);
+			break;
+		case BOHACHEVSKY_1:
+			cudaMemcpyFromSymbol(
+				&d_symbol,
+				d_bohachevsky1,
+				sizeof(opt_func),
+				0,
+				cudaMemcpyDeviceToHost
+			);
+			break;
+		case BOHACHEVSKY_2:
+			cudaMemcpyFromSymbol(
+				&d_symbol,
+				d_bohachevsky2,
+				sizeof(opt_func),
+				0,
+				cudaMemcpyDeviceToHost
+			);
+			break;
+		case BOHACHEVSKY_3:
+			cudaMemcpyFromSymbol(
+				&d_symbol,
+				d_bohachevsky3,
+				sizeof(opt_func),
+				0,
+				cudaMemcpyDeviceToHost
+			);
+			break;
+		case SCHWEFEL:
+			cudaMemcpyFromSymbol(
+				&d_symbol,
+				d_schwefel,
+				sizeof(opt_func),
+				0,
+				cudaMemcpyDeviceToHost
+			);
+			break;
+		case INVALID:
+			return;
+		}
 
 		size_t SHMEM_SIZE =
 			dimensions*block_size*sizeof(float) + //sh_cords
@@ -1197,7 +1209,7 @@ namespace gpu{
 			d_values,
 			d_hive_cords,
 			trials_limit,
-			optimization_function
+			d_symbol
 		);
 		(*duration) = timer.stop();
 

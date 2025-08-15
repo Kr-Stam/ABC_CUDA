@@ -192,7 +192,7 @@ __host__ __device__ float problems::gpu::rastrigin2(float* args, int n)
 ///\note This is only a 2d function
 __host__ __device__ float problems::gpu::schaffer2(float* args, int n)
 {
-	if(n < 2) return 0;
+	if(n != 2) return 0;
 
 	float x2 = args[0]*args[0];
 	float y2 = args[1]*args[1];
@@ -204,7 +204,7 @@ __host__ __device__ float problems::gpu::schaffer2(float* args, int n)
 ///\note This is only a 2d function
 __host__ __device__ float problems::gpu::schaffer4(float* args, int n)
 {
-	if(n < 2) return 0;
+	if(n != 2) return 0;
 
 	float x2 = args[0]*args[0];
 	float y2 = args[1]*args[1];

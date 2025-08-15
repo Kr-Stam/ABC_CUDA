@@ -1,8 +1,9 @@
 #pragma once
 
 #include <stdbool.h>
+#include <array>
 
-namespace utils::array
+namespace utils::arr
 {
 	void print_array_double(
 		double* arr,
@@ -37,4 +38,20 @@ namespace utils::array
 		double* B,
 		int     n
 	);
+
+	template <std::size_t N>
+	constexpr std::array<char, N> str_to_arr(const char str[N]) {
+		std::array<char, N> arr = { };
+
+		int i = 0;
+		while(str[i] != '\0' && i < N - 1)
+		{
+			arr[i] = str[i];
+			i++;
+		}
+
+		arr[i] = '\0';
+
+		return arr;
+	}
 }
