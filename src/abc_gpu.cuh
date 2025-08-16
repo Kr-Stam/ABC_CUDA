@@ -32,97 +32,6 @@ namespace gpu{
 	__constant__ float c_lower_bounds[MAX_DIMENSIONS];
 	__constant__ float c_upper_bounds[MAX_DIMENSIONS];
 
-	//TODO: 
-	//treba da napravam da ne prima nizi tuku specifichni indeksi/vrednosti
-	//poradi toa shto nema potreba od celata niza
-	/*
-	 * @brief Generate a random solution/food source within a hypercube defined
-	 *        by the given bounds
-	 *
-	 * @tparam[in] dim    the number of dimensions for the problem
-	 * @tparam[in] inverse determines whether to inverse the result
-	 
-	 * @param[inout] cords an array of floats which includes all cords
-	 * @param[inout] values      an array of floats which includes all values
-	 * @param[in]    idx         the position of the bee in the given arrays
-	 * @param[in]    function    function to be optimized
-	 */
-	template<uint32_t dim>
-	__inline__ __device__ void generate_random_solution(
-		float*       cords,
-		float*       values,
-		int          idx,
-		opt_func     function,
-		curandState* state
-	)
-	{
-		//#pragma unroll
-		for(int i = 0; i < dim; i++)
-			cords[idx*dim+i] = rand_bounded_float(
-				state,
-				c_lower_bounds[i],
-				c_upper_bounds[i]
-			);
-
-		values[idx] = function(&cords[idx], dim);
-	}
-
-	/*
-	 * @brief Local optimization around the existing food source
-	 *
-	 * @tparam[in] dim    the number of dimensions for the problem
-	 * @tparam[in] inverse determines whether to inverse the result
-	 *
-	 * @param[in] idx          index of the bee/thread to be optimized
-	 * @param[in] cords  an coordinate array of all candidate bees/threads
-	 * @details Randomly select another bee and merge the solutions with
-	 *          a stochastic step
-	 *
-	 * @note The index is passed in because of simpler shared memory optimization
-	 */
-	template<uint32_t dim>
-	__forceinline__ __device__ void local_optimization(
-		int          idx,
-		float*       cords,
-		float*       values,
-		int*         trials,
-		opt_func     function,
-		curandState* state,
-		float c_lower_bounds[dim],
-		float c_upper_bounds[dim]
-	)
-	{
-		int choice = rand_bounded_int(state, 0, blockDim.x);
-		float tmp_cords[dim];
-
-		//! proveri dali e isto 
-		for(int i = 0; i < dim; i++)
-		{
-			float step = cords[idx*dim + i] - cords[choice*dim + i];
-			step *= curand_uniform(state);
-
-			tmp_cords[i] = cords[idx*dim + i] + step;
-
-			tmp_cords[i] = fast_clip_float(
-				tmp_cords[i],
-				c_lower_bounds[i],
-				c_upper_bounds[i]
-			);
-		}
-
-		float tmp_value = function(tmp_cords, dim);
-
-		if(tmp_value < values[idx])
-		{
-			values[idx] = tmp_value;
-			*trials = 0;
-		}
-		else
-		{
-			(*trials)++;
-		}
-	}
-
 	/*
 	 * @brief Optimized sum reduction exploiting warp-level parallelism
 	 * @param[in] sdata source array to be sumed
@@ -153,97 +62,6 @@ namespace gpu{
 		if(BLOCK_SIZE >=  8) sdata[tid] = fmax(sdata[tid], sdata[tid +  4]);
 		if(BLOCK_SIZE >=  4) sdata[tid] = fmax(sdata[tid], sdata[tid +  2]);
 		if(BLOCK_SIZE >=  2) sdata[tid] = fmax(sdata[tid], sdata[tid +  1]);
-	}
-
-	/*
-	 * @brief Initializes a roulette wheel
-	 *
-	 * @tparam[in] BLOCK_SIZE    number of choices
-	 * @tparam[in] roulette_type determines the normalization type used
-	 *
-	 * @param[in]  values   array of floats based on which the roulette wheel
-	 *                      will be constructed
-	 * @param[out] roulette  array of float values needed for weighted roulette
-	 *                       wheel selection
-	 * @param[in]  shmem_max array of at least BLOCK_SIZE used to calculate
-	 *                       the maximum element
-	 * @param[in]  shmem_sum array of at least BLOCK_SIZE used to calculate
-	 *                       the sum of all elements
-	 * @param[in]  tid       idx to be used to load the respective value element
-	 *
-	 * @note The resulting roulette array does not contain a cumulative sum of
-	 *       elements which means that the elements must be sumed when iterating
-	 *       for selection
-	 */
-	template<
-		uint32_t BLOCK_SIZE,
-		Roulette roulette_type
-	>
-	__device__ void create_roulette_wheel(
-		float* sh_values,
-		float* sh_roulette,
-		float* sh_sum,
-		float* sh_max
-	)
-	{
-		//sum reduction and max calculation
-		sh_sum[threadIdx.x] = sh_values[threadIdx.x];
-		sh_max[threadIdx.x] = sh_values[threadIdx.x];
-
-		if constexpr (BLOCK_SIZE == 1024)
-		{
-			if(threadIdx.x < 512)
-			{
-				sh_sum[threadIdx.x] += sh_sum[threadIdx.x + 512];
-				sh_max[threadIdx.x] =  fmax(sh_max[threadIdx.x],
-											sh_max[threadIdx.x + 512]);
-			}
-			__syncthreads();
-		}
-		
-		if constexpr (BLOCK_SIZE >= 512)
-		{
-			if(threadIdx.x < 256)
-			{
-				sh_sum[threadIdx.x] += sh_sum[threadIdx.x + 256];
-				sh_max[threadIdx.x] =  fmax(sh_max[threadIdx.x],
-											sh_max[threadIdx.x + 256]);
-			}
-			__syncthreads();
-		}
-		if constexpr (BLOCK_SIZE >= 256)
-		{
-			if(threadIdx.x < 128)
-			{
-				sh_sum[threadIdx.x] += sh_sum[threadIdx.x + 128];
-				sh_max[threadIdx.x] =  fmax(sh_max[threadIdx.x],
-											sh_max[threadIdx.x + 128]);
-			}
-			__syncthreads();
-		}
-		if constexpr (BLOCK_SIZE >= 128)
-		{
-			if(threadIdx.x < 64)
-			{
-				sh_sum[threadIdx.x] += sh_sum[threadIdx.x + 64];
-				sh_max[threadIdx.x] =  fmax(sh_max[threadIdx.x],
-											sh_max[threadIdx.x + 64]);
-			}
-			__syncthreads();
-		}
-
-		if(threadIdx.x < 32) warp_reduce_sum<BLOCK_SIZE>(sh_sum, threadIdx.x);
-		if(threadIdx.x < 32) warp_reduce_max<BLOCK_SIZE>(sh_max, threadIdx.x);
-
-		__syncthreads();
-
-		//kakva normalizacija pravam tuka (max - value) / (max*count - sum)
-		
-		
-		//! treba da se usoglasi
-		sh_roulette[threadIdx.x] = (sh_max[0] - sh_values[threadIdx.x]) /
-								   (blockDim.x*sh_max[0] - sh_sum[0]);
-		__syncthreads();
 	}
 
 	template<
@@ -298,9 +116,6 @@ namespace gpu{
 		float* rank_arr
 	)
 	{
-		//for(int i = 0; i < size; i++)
-		//	if(rank_arr[i] >= choice) return i;
-
 		int low  = 0;
 		int high = size - 1;
 
@@ -317,34 +132,6 @@ namespace gpu{
 				return mid;
 		}
 		return mid;
-	}
-
-	template<
-		uint32_t dim,
-		uint32_t size,
-		Rank     rank_type,
-		uint32_t c_num,
-		uint32_t c_div,
-		bool     inverse,
-		bool     shmem
-	>
-	__forceinline__ __device__ int rank_selection_constant(
-		float*       sh_cords,
-		float*       sh_values,
-		int*         trials,
-		curandState* state
-	)
-	{
-		float rand = curand_uniform(state);
-
-		if constexpr (rank_type == CONSTANT_LINEAR)
-			return rank_const::dev_lin<size>(rand);
-		if constexpr (rank_type == CONSTANT_EXPONENTIAL)
-			return rank_const::dev_exp<size, c_num, c_div>(rand);
-		if constexpr (rank_type == CONSTANT_EXPONENTIAL_2)
-			return rank_const::dev_exp2<size, c_num, c_div>(rand);
-
-		return 0;
 	}
 
 	template<
@@ -417,96 +204,6 @@ namespace gpu{
 			return min_idx;
 	}
 
-	template<
-		uint32_t dim,
-		uint32_t BLOCK_SIZE,
-		Roulette roulette_type
-	>
-	__forceinline__ __device__ int roulette_wheel_selection(
-		float* sh_values,
-		float* sh_cords,
-		float* sh_roulette, 
-		float* sh_sum,
-		float* sh_max,
-		curandState* state
-	)
-	{
-		//create_roulette_wheel<
-		//	BLOCK_SIZE,
-		//	roulette_type
-		//>(
-		//	sh_values,
-		//	sh_roulette,
-		//	sh_sum,
-		//	sh_max
-		//);
-		//sum reduction and max calculation
-		sh_sum[threadIdx.x] = sh_values[threadIdx.x];
-		sh_max[threadIdx.x] = sh_values[threadIdx.x];
-
-		if constexpr (BLOCK_SIZE == 1024)
-		{
-			if(threadIdx.x < 512)
-			{
-				sh_sum[threadIdx.x] += sh_sum[threadIdx.x + 512];
-				sh_max[threadIdx.x] =  fmax(sh_max[threadIdx.x],
-											sh_max[threadIdx.x + 512]);
-			}
-			__syncthreads();
-		}
-		
-		if constexpr (BLOCK_SIZE >= 512)
-		{
-			if(threadIdx.x < 256)
-			{
-				sh_sum[threadIdx.x] += sh_sum[threadIdx.x + 256];
-				sh_max[threadIdx.x] =  fmax(sh_max[threadIdx.x],
-											sh_max[threadIdx.x + 256]);
-			}
-			__syncthreads();
-		}
-		if constexpr (BLOCK_SIZE >= 256)
-		{
-			if(threadIdx.x < 128)
-			{
-				sh_sum[threadIdx.x] += sh_sum[threadIdx.x + 128];
-				sh_max[threadIdx.x] =  fmax(sh_max[threadIdx.x],
-											sh_max[threadIdx.x + 128]);
-			}
-			__syncthreads();
-		}
-		if constexpr (BLOCK_SIZE >= 128)
-		{
-			if(threadIdx.x < 64)
-			{
-				sh_sum[threadIdx.x] += sh_sum[threadIdx.x + 64];
-				sh_max[threadIdx.x] =  fmax(sh_max[threadIdx.x],
-											sh_max[threadIdx.x + 64]);
-			}
-			__syncthreads();
-		}
-
-		if(threadIdx.x < 32) warp_reduce_sum<BLOCK_SIZE>(sh_sum, threadIdx.x);
-		if(threadIdx.x < 32) warp_reduce_max<BLOCK_SIZE>(sh_max, threadIdx.x);
-
-		__syncthreads();
-
-		sh_roulette[threadIdx.x] = (sh_max[0] - sh_values[threadIdx.x]) /
-								   (blockDim.x*sh_max[0] - sh_sum[0]);
-		__syncthreads();
-
-		float sum = 0;
-		float rand = curand_uniform(state);
-
-		for(int idx = 0; idx < BLOCK_SIZE; idx++)
-		{
-			sum += sh_roulette[idx];
-			if(rand <= sum) return idx;
-		}
-
-		return 0;
-	}
-
 	template<uint32_t dim>
 	__device__ void copy_cords(
 		float dest[dim],
@@ -562,13 +259,19 @@ namespace gpu{
 		opt_func optimization_function
 	)
 	{
-		//-------------------SHARED-MEMORY-DECLARATION-----------------------//
+		//-------------------------VARIABLE-DECLARATION----------------------//
 		extern __shared__ float shmem[];
-
 		float *sh_cords, *sh_values, *sh_sum, *sh_max, *sh_roulette;
 
-		if constexpr (shmem_enabled)
-		{
+		curandState state;
+
+		int trials;
+
+		float tmp_cords[dim];
+		float tmp_value;
+		//-------------------------------------------------------------------//
+
+		{ // Initialize shared memory and curand variables
 			sh_cords  = shmem;
 			sh_values = sh_cords + blockDim.x*dim;
 
@@ -598,359 +301,369 @@ namespace gpu{
 				&sh_cords[threadIdx.x*dim],
 				dim
 			);
-		}
-		//! ova sega za sega e sekogash so shared memory
-		else
-		{
-			sh_cords  = cords;
-			sh_values = values;
-			
-			sh_sum      = shmem;
-			sh_max      = sh_sum + blockDim.x;
-			sh_roulette = sh_max + blockDim.x;
-		}
-		__syncthreads();
-		//-----------------------------------------------------------------------//
 
-		//------------------------CURAND-INITIALIZATION--------------------------//
-		curandState state;
-		curand_init(clock64() + blockDim.x*blockIdx.x + threadIdx.x, 0, 0, &state);
-		//-----------------------------------------------------------------------//
-
-		//----------------------INITIALIZE-INITIAL-STATE-------------------------//
-		float tmp_cords[dim];
-		float tmp_value;
-		#pragma unroll
-		for(int i = 0; i < dim; i++)
-			tmp_cords[i] = c_lower_bounds[i] + curand_uniform(&state) *
-				(c_upper_bounds[i] - c_lower_bounds[i]);
-		  
-		tmp_value = optimization_function(tmp_cords, dim);
-		if(tmp_value < sh_values[threadIdx.x])
-		{
-			sh_values[threadIdx.x] = tmp_value;
-			//!!!
-			copy_cords<dim>(
-				&sh_cords[threadIdx.x*dim],
-				tmp_cords
+			curand_init(
+				clock64() + blockDim.x*blockIdx.x + threadIdx.x,
+				0, 0, &state
 			);
 		}
-		int trials = 0;
-
 		__syncthreads();
-		//-----------------------------------------------------------------------//
 
-		//--------------------------------MAIN-LOOOP-----------------------------//
-		for(int i = 0; i < iterations; i++)
-		{
-			//------------------EMPLOYED-BEE-LOCAL-OPTIMIZATION------------------//
-			int choice;
-			choice = curand_uniform(&state) * BLOCK_SIZE;
-
+		{ // Initial bee state
+			#pragma unroll
 			for(int i = 0; i < dim; i++)
-			{
-				tmp_cords[i] = sh_cords[threadIdx.x*dim + i] +
-					(sh_cords[threadIdx.x*dim + i] - sh_cords[choice*dim + i]) *
-					curand_uniform(&state);
-
-				if(tmp_cords[i] > c_upper_bounds[i])
-					tmp_cords[i] = c_upper_bounds[i];
-				if(tmp_cords[i] < c_lower_bounds[i])
-					tmp_cords[i] = c_lower_bounds[i];
-			}
-
+				tmp_cords[i] = c_lower_bounds[i] + curand_uniform(&state) *
+					(c_upper_bounds[i] - c_lower_bounds[i]);
+			  
 			tmp_value = optimization_function(tmp_cords, dim);
 			if(tmp_value < sh_values[threadIdx.x])
 			{
 				sh_values[threadIdx.x] = tmp_value;
-				//!!!
 				copy_cords<dim>(
 					&sh_cords[threadIdx.x*dim],
 					tmp_cords
 				);
-
-				trials = 0;
 			}
-			else
-			{
-				trials++;
+			trials = 0;
+		}
+		__syncthreads();
+
+		// Main Loop
+		for(int i = 0; i < iterations; i++)
+		{
+			{ // Local optimization
+				int choice = curand_uniform(&state) * BLOCK_SIZE;
+				for(int i = 0; i < dim; i++)
+				{
+					tmp_cords[i] =
+						sh_cords[threadIdx.x*dim + i] +
+						(sh_cords[threadIdx.x*dim + i] - sh_cords[choice*dim + i]) *
+						curand_uniform(&state);
+
+					if(tmp_cords[i] > c_upper_bounds[i])
+						tmp_cords[i] = c_upper_bounds[i];
+					if(tmp_cords[i] < c_lower_bounds[i])
+						tmp_cords[i] = c_lower_bounds[i];
+				}
+
+				tmp_value = optimization_function(tmp_cords, dim);
+				if(tmp_value < sh_values[threadIdx.x])
+				{
+					sh_values[threadIdx.x] = tmp_value;
+					//!!!
+					copy_cords<dim>(
+						&sh_cords[threadIdx.x*dim],
+						tmp_cords
+					);
+
+					trials = 0;
+				}
+				else
+				{
+					trials++;
+				}
 			}
 			__syncthreads();
-			//-------------------------------------------------------------------//
 
-			//------------------ONLOOKER-BEE-GLOBAL-OPTIMIZATION-----------------//
-			// the selection is inlined to reduce register usage in the kernel
-			if constexpr (selection_type == ROULETTE_WHEEL)
-			{
-				if constexpr (roulette_type  == SUM)
+			{ //Onlooker Bee Global Pptimization
+				int choice;
+				// selection type is inlined to reduce register usage
+				if constexpr (selection_type == ROULETTE_WHEEL)
 				{
-					sh_sum[threadIdx.x] = sh_values[threadIdx.x];
-
-					if constexpr (BLOCK_SIZE == 1024)
+					if constexpr (roulette_type  == SUM)
 					{
-						if(threadIdx.x < 512)
-							sh_sum[threadIdx.x] += sh_sum[threadIdx.x + 512];
+						sh_sum[threadIdx.x] = sh_values[threadIdx.x];
+
+						if constexpr (BLOCK_SIZE == 1024)
+						{
+							if(threadIdx.x < 512)
+								sh_sum[threadIdx.x] += sh_sum[threadIdx.x + 512];
+							__syncthreads();
+						}
+
+						if constexpr (BLOCK_SIZE >= 512)
+						{
+							if(threadIdx.x < 256)
+								sh_sum[threadIdx.x] += sh_sum[threadIdx.x + 256];
+							__syncthreads();
+						}
+						if constexpr (BLOCK_SIZE >= 256)
+						{
+							if(threadIdx.x < 128)
+								sh_sum[threadIdx.x] += sh_sum[threadIdx.x + 128];
+							__syncthreads();
+						}
+						if constexpr (BLOCK_SIZE >= 128)
+						{
+							if(threadIdx.x < 64)
+								sh_sum[threadIdx.x] += sh_sum[threadIdx.x + 64];
+							__syncthreads();
+						}
+
+						if(threadIdx.x < 32)
+						{
+							warp_reduce_sum<BLOCK_SIZE>(sh_sum, threadIdx.x);
+							warp_reduce_max<BLOCK_SIZE>(sh_max, threadIdx.x);
+						}
+
+						__syncthreads();
+
+						sh_roulette[threadIdx.x] = sh_values[threadIdx.x] /
+						                           sh_sum[0];
 						__syncthreads();
 					}
-
-					if constexpr (BLOCK_SIZE >= 512)
+					else if constexpr (roulette_type == CUSTOM)
 					{
-						if(threadIdx.x < 256)
-							sh_sum[threadIdx.x] += sh_sum[threadIdx.x + 256];
+						sh_sum[threadIdx.x] = sh_values[threadIdx.x];
+						sh_max[threadIdx.x] = sh_values[threadIdx.x];
+
+						if constexpr (BLOCK_SIZE == 1024)
+						{
+							if(threadIdx.x < 512)
+							{
+								sh_sum[threadIdx.x] += sh_sum[threadIdx.x + 512];
+								sh_max[threadIdx.x] = fmax(
+									sh_max[threadIdx.x],
+									sh_max[threadIdx.x + 512]
+								);
+							}
+							__syncthreads();
+						}
+
+						if constexpr (BLOCK_SIZE >= 512)
+						{
+							if(threadIdx.x < 256)
+							{
+								sh_sum[threadIdx.x] += sh_sum[threadIdx.x + 256];
+								sh_max[threadIdx.x] =  fmax(
+									sh_max[threadIdx.x],
+									sh_max[threadIdx.x + 256]
+								);
+							}
+							__syncthreads();
+						}
+						if constexpr (BLOCK_SIZE >= 256)
+						{
+							if(threadIdx.x < 128)
+							{
+								sh_sum[threadIdx.x] += sh_sum[threadIdx.x + 128];
+								sh_max[threadIdx.x] =  fmax(
+									sh_max[threadIdx.x],
+									sh_max[threadIdx.x + 128]
+								);
+							}
+							__syncthreads();
+						}
+						if constexpr (BLOCK_SIZE >= 128)
+						{
+							if(threadIdx.x < 64)
+							{
+								sh_sum[threadIdx.x] += sh_sum[threadIdx.x + 64];
+								sh_max[threadIdx.x] =  fmax(
+									sh_max[threadIdx.x],
+									sh_max[threadIdx.x + 64]
+								);
+							}
+							__syncthreads();
+						}
+
+						if(threadIdx.x < 32)
+						{
+							warp_reduce_sum<BLOCK_SIZE>(sh_sum, threadIdx.x);
+							warp_reduce_max<BLOCK_SIZE>(sh_max, threadIdx.x);
+						}
+
+						__syncthreads();
+
+						sh_roulette[threadIdx.x] =
+							(sh_max[0] - sh_values[threadIdx.x]) /
+							(blockDim.x*sh_max[0] - sh_sum[0]);
 						__syncthreads();
 					}
-					if constexpr (BLOCK_SIZE >= 256)
+					else if constexpr (roulette_type == MIN_MAX)
 					{
-						if(threadIdx.x < 128)
-							sh_sum[threadIdx.x] += sh_sum[threadIdx.x + 128];
+						float* sh_min = sh_sum;
+						sh_min[threadIdx.x] = sh_values[threadIdx.x];
+						sh_max[threadIdx.x] = sh_values[threadIdx.x];
+
+						if constexpr (BLOCK_SIZE == 1024)
+						{
+							if(threadIdx.x < 512)
+							{
+								sh_min[threadIdx.x] = fmin(
+									sh_min[threadIdx.x],
+									sh_min[threadIdx.x + 512]
+								);
+								sh_max[threadIdx.x] = fmax(
+									sh_max[threadIdx.x],
+									sh_max[threadIdx.x + 512]
+								);
+							}
+							__syncthreads();
+						}
+
+						if constexpr (BLOCK_SIZE >= 512)
+						{
+							if(threadIdx.x < 256)
+							{
+								sh_min[threadIdx.x] = fmin(
+									sh_min[threadIdx.x],
+									sh_min[threadIdx.x + 256]
+								);
+								sh_max[threadIdx.x] = fmax(
+									sh_max[threadIdx.x],
+									sh_max[threadIdx.x + 256]
+								);
+							}
+							__syncthreads();
+						}
+						if constexpr (BLOCK_SIZE >= 256)
+						{
+							if(threadIdx.x < 128)
+							{
+								sh_min[threadIdx.x] =  fmin(
+									sh_min[threadIdx.x],
+									sh_min[threadIdx.x + 128]
+								);
+								sh_max[threadIdx.x] =  fmax(
+									sh_max[threadIdx.x],
+									sh_max[threadIdx.x + 128]
+								);
+							}
+							__syncthreads();
+						}
+						if constexpr (BLOCK_SIZE >= 128)
+						{
+							if(threadIdx.x < 64)
+							{
+								sh_min[threadIdx.x] = fmin(
+									sh_min[threadIdx.x],
+									sh_min[threadIdx.x + 64]
+								);
+								sh_max[threadIdx.x] = fmax(
+									sh_max[threadIdx.x],
+									sh_max[threadIdx.x + 64]
+								);
+							}
+							__syncthreads();
+						}
+
+						if(threadIdx.x < 32)
+						{
+							warp_reduce_sum<BLOCK_SIZE>(sh_min, threadIdx.x);
+							warp_reduce_max<BLOCK_SIZE>(sh_max, threadIdx.x);
+						}
+
+						__syncthreads();
+
+						sh_roulette[threadIdx.x] =
+							(sh_values[threadIdx.x] - sh_min[0]) /
+							(sh_max[0] - sh_min[0]);
 						__syncthreads();
 					}
-					if constexpr (BLOCK_SIZE >= 128)
+				
+					//! this is a bottleneck
+					float sum = 0;
+					float rand = curand_uniform(&state);
+					choice = 0;
+
+					for(int idx = 0; idx < BLOCK_SIZE; idx++)
 					{
-						if(threadIdx.x < 64)
-							sh_sum[threadIdx.x] += sh_sum[threadIdx.x + 64];
-						__syncthreads();
+						sum += sh_roulette[idx];
+						if(rand <= sum)
+						{
+							choice = idx;
+							break;
+						}
 					}
-
-					if(threadIdx.x < 32)
-					{
-						warp_reduce_sum<BLOCK_SIZE>(sh_sum, threadIdx.x);
-						warp_reduce_max<BLOCK_SIZE>(sh_max, threadIdx.x);
-					}
-
-					__syncthreads();
-
-					sh_roulette[threadIdx.x] = sh_values[threadIdx.x] / sh_sum[0];
-					__syncthreads();
 				}
-				else if constexpr (roulette_type == CUSTOM)
+				else if constexpr (selection_type == RANK)
 				{
-					sh_sum[threadIdx.x] = sh_values[threadIdx.x];
-					sh_max[threadIdx.x] = sh_values[threadIdx.x];
-
-					if constexpr (BLOCK_SIZE == 1024)
+					sort_bees<dim, BLOCK_SIZE>(sh_cords, sh_values);
+					float rand = curand_uniform(&state);
+					if constexpr (rank_type < CONSTANT_LINEAR)
 					{
-						if(threadIdx.x < 512)
-						{
-							sh_sum[threadIdx.x] += sh_sum[threadIdx.x + 512];
-							sh_max[threadIdx.x] = fmax(sh_max[threadIdx.x],
-							                           sh_max[threadIdx.x + 512]);
-						}
-						__syncthreads();
+						choice = rank_selection_from_arr<dim>(
+							sh_cords,
+							sh_values,
+							rand,
+							rank_arr
+						 );
 					}
+					else if constexpr (rank_type == CONSTANT_LINEAR)
+						choice = rank_const::dev_lin<BLOCK_SIZE>(rand);
+					else if constexpr (rank_type == CONSTANT_EXPONENTIAL)
+						choice = rank_const::dev_exp<BLOCK_SIZE, 1, 20>(rand);
+					else if constexpr (rank_type == CONSTANT_EXPONENTIAL_2)
+						choice = rank_const::dev_exp2<BLOCK_SIZE, 1, 20>(rand);
 
-					if constexpr (BLOCK_SIZE >= 512)
-					{
-						if(threadIdx.x < 256)
-						{
-							sh_sum[threadIdx.x] += sh_sum[threadIdx.x + 256];
-							sh_max[threadIdx.x] =  fmax(sh_max[threadIdx.x],
-							                            sh_max[threadIdx.x + 256]);
-						}
-						__syncthreads();
-					}
-					if constexpr (BLOCK_SIZE >= 256)
-					{
-						if(threadIdx.x < 128)
-						{
-							sh_sum[threadIdx.x] += sh_sum[threadIdx.x + 128];
-							sh_max[threadIdx.x] =  fmax(sh_max[threadIdx.x],
-							                            sh_max[threadIdx.x + 128]);
-						}
-						__syncthreads();
-					}
-					if constexpr (BLOCK_SIZE >= 128)
-					{
-						if(threadIdx.x < 64)
-						{
-							sh_sum[threadIdx.x] += sh_sum[threadIdx.x + 64];
-							sh_max[threadIdx.x] =  fmax(sh_max[threadIdx.x],
-							                            sh_max[threadIdx.x + 64]);
-						}
-						__syncthreads();
-					}
-
-					if(threadIdx.x < 32)
-					{
-						warp_reduce_sum<BLOCK_SIZE>(sh_sum, threadIdx.x);
-						warp_reduce_max<BLOCK_SIZE>(sh_max, threadIdx.x);
-					}
-
-					__syncthreads();
-
-					sh_roulette[threadIdx.x] =
-						(sh_max[0] - sh_values[threadIdx.x]) /
-						(blockDim.x*sh_max[0] - sh_sum[0]);
-					__syncthreads();
+					//! ova e poradi toa shto CONSTANT_EXPONENTIAL ne e pravilno
+					//! napraven, 2 e okej
+					if (choice > BLOCK_SIZE) choice = 0;
 				}
-				else if constexpr (roulette_type == MIN_MAX)
+				else if constexpr (selection_type == TOURNAMENT)
 				{
-					float* sh_min = sh_sum;
-					sh_min[threadIdx.x] = sh_values[threadIdx.x];
-					sh_max[threadIdx.x] = sh_values[threadIdx.x];
-
-					if constexpr (BLOCK_SIZE == 1024)
+					if constexpr (tournament_type == SINGLE)
 					{
-						if(threadIdx.x < 512)
-						{
-							sh_min[threadIdx.x] = fmin(sh_min[threadIdx.x],
-							                           sh_min[threadIdx.x + 512]);
-							sh_max[threadIdx.x] = fmax(sh_max[threadIdx.x],
-							                           sh_max[threadIdx.x + 512]);
-						}
-						__syncthreads();
+						choice = tournament_selection_standard<
+							BLOCK_SIZE,
+							dim,
+							tournament_size
+						>(
+							sh_cords,
+							sh_values,
+							&state
+						);
 					}
-
-					if constexpr (BLOCK_SIZE >= 512)
+					else if constexpr (tournament_type == MULTIPLE)
 					{
-						if(threadIdx.x < 256)
-						{
-							sh_min[threadIdx.x] = fmin(sh_min[threadIdx.x],
-							                           sh_min[threadIdx.x + 256]);
-							sh_max[threadIdx.x] = fmax(sh_max[threadIdx.x],
-							                           sh_max[threadIdx.x + 256]);
-						}
-						__syncthreads();
-					}
-					if constexpr (BLOCK_SIZE >= 256)
-					{
-						if(threadIdx.x < 128)
-						{
-							sh_min[threadIdx.x] =  fmin(sh_min[threadIdx.x],
-							                            sh_min[threadIdx.x + 128]);
-							sh_max[threadIdx.x] =  fmax(sh_max[threadIdx.x],
-							                            sh_max[threadIdx.x + 128]);
-						}
-						__syncthreads();
-					}
-					if constexpr (BLOCK_SIZE >= 128)
-					{
-						if(threadIdx.x < 64)
-						{
-							sh_min[threadIdx.x] = fmin(sh_min[threadIdx.x],
-							                           sh_min[threadIdx.x + 64]);
-							sh_max[threadIdx.x] = fmax(sh_max[threadIdx.x],
-							                           sh_max[threadIdx.x + 64]);
-						}
-						__syncthreads();
-					}
-
-					if(threadIdx.x < 32)
-					{
-						warp_reduce_sum<BLOCK_SIZE>(sh_min, threadIdx.x);
-						warp_reduce_max<BLOCK_SIZE>(sh_max, threadIdx.x);
-					}
-
-					__syncthreads();
-
-					sh_roulette[threadIdx.x] =
-						(sh_values[threadIdx.x] - sh_min[0]) /
-						(sh_max[0] - sh_min[0]);
-					__syncthreads();
-				}
-				//! ova treba da bide dopraveno
-				float sum = 0;
-				float rand = curand_uniform(&state);
-				choice = 0;
-
-				for(int idx = 0; idx < BLOCK_SIZE; idx++)
-				{
-					sum += sh_roulette[idx];
-					if(rand <= sum)
-					{
-						choice = idx;
-						break;
+						choice = tournament_selection_custom<
+							BLOCK_SIZE,
+							dim,
+							tournament_num,
+							tournament_size
+						>(
+							sh_cords,
+							sh_values,
+							&state
+						 );
 					}
 				}
-			}
-			else if constexpr (selection_type == RANK)
-			{
-				sort_bees<dim, BLOCK_SIZE>(sh_cords, sh_values);
-				float rand = curand_uniform(&state);
-				if constexpr (rank_type < CONSTANT_LINEAR)
-				{
-					choice = rank_selection_from_arr<dim>(
-						sh_cords,
-						sh_values,
-						rand,
-						rank_arr
-					 );
-				}
-				else if constexpr (rank_type == CONSTANT_LINEAR)
-					choice = rank_const::dev_lin<BLOCK_SIZE>(rand);
-				else if constexpr (rank_type == CONSTANT_EXPONENTIAL)
-					choice = rank_const::dev_exp<BLOCK_SIZE, 1, 20>(rand);
-				else if constexpr (rank_type == CONSTANT_EXPONENTIAL_2)
-					choice = rank_const::dev_exp2<BLOCK_SIZE, 1, 20>(rand);
 
-				//! ova e poradi toa shto CONSTANT_EXPONENTIAL ne e pravilno
-				//! napraven, 2 e okej
-				if (choice > BLOCK_SIZE) choice = 0;
-			}
-			else if constexpr (selection_type == TOURNAMENT)
-			{
-				if constexpr (tournament_type == SINGLE)
-				{
-					choice = tournament_selection_standard<
-						BLOCK_SIZE,
-						dim,
-						tournament_size
-					>(
-						sh_cords,
-						sh_values,
-						&state
-					);
-				}
-				else if constexpr (tournament_type == MULTIPLE)
-				{
-					choice = tournament_selection_custom<
-						BLOCK_SIZE,
-						dim,
-						tournament_num,
-						tournament_size
-					>(
-						sh_cords,
-						sh_values,
-						&state
-					 );
-				}
-			}
-
-			//! radi sinhronizacija
-			//!!!
-			copy_cords<dim>(
-				 tmp_cords,
-				&sh_cords[choice*dim]
-			);
-			for(int i = 0; i < dim; i++)
-			{
-				if(tmp_cords[i] > c_upper_bounds[i])
-					tmp_cords[i] = c_upper_bounds[i];
-				if(tmp_cords[i] < c_lower_bounds[i])
-					tmp_cords[i] = c_lower_bounds[i];
-			}
-			//! specifichno tuka pravi nekoj problem optimizacijata
-			//tmp_value = sh_values[choice];
-			//tmp_value = optimization_function(&sh_cords[choice*dim], dim);
-			tmp_value = optimization_function(tmp_cords, dim);
-
-			if(sh_values[threadIdx.x] > tmp_value)
-			{
+				//! radi sinhronizacija
 				copy_cords<dim>(
-					&sh_cords[threadIdx.x*dim],
-					 tmp_cords
+					 tmp_cords,
+					&sh_cords[choice*dim]
 				);
-				sh_values[threadIdx.x] = tmp_value;
+				for(int i = 0; i < dim; i++)
+				{
+					if(tmp_cords[i] > c_upper_bounds[i])
+						tmp_cords[i] = c_upper_bounds[i];
+					if(tmp_cords[i] < c_lower_bounds[i])
+						tmp_cords[i] = c_lower_bounds[i];
+				}
+				//! specifichno tuka pravi nekoj problem optimizacijata
+				//tmp_value = sh_values[choice];
+				//tmp_value = optimization_function(&sh_cords[choice*dim], dim);
+				tmp_value = optimization_function(tmp_cords, dim);
 
-				trials = 0;
-			}
-			else
-			{
-				trials++;
-			}
-			//-------------------------------------------------------------------//
+				if(sh_values[threadIdx.x] > tmp_value)
+				{
+					copy_cords<dim>(
+						&sh_cords[threadIdx.x*dim],
+						 tmp_cords
+					);
+					sh_values[threadIdx.x] = tmp_value;
 
-			//------------------------TRIAL-LIMIT-CHECK--------------------------//
+					trials = 0;
+				}
+				else
+				{
+					trials++;
+				}
+			}
+
+			// Trial Limit Check
 			if(trials > trials_limit)
 			{
 				#pragma unroll
@@ -964,35 +677,34 @@ namespace gpu{
 						sh_cords[threadIdx.x*dim+i] = c_lower_bounds[i];
 				}
 
-				//!!!
 				sh_values[threadIdx.x] = optimization_function(
 					&sh_cords[threadIdx.x*dim],
 					dim
 				);
 				trials = 0;
 			}
-			//-------------------------------------------------------------------//
 		}
 
-		//-----------------------------RETURN-VARIABLES--------------------------//
-		copy_cords<dim>(
-			&cords[(blockDim.x*blockIdx.x + threadIdx.x)*dim],
-			&sh_cords[threadIdx.x*dim]
-		);
-	
-		//values[blockDim.x*blockIdx.x + threadIdx.x] = sh_values[threadIdx.x];
-		values[blockDim.x*blockIdx.x + threadIdx.x] = 
-			optimization_function(&sh_cords[threadIdx.x*dim], dim);
-
-		if (threadIdx.x < COLONY_POOL)
-		{
-			//Load values into shared memory
+		{ // Assign return variables
 			copy_cords<dim>(
-				&hive_cords[(blockIdx.x*COLONY_POOL + threadIdx.x)*dim],
+				&cords[(blockDim.x*blockIdx.x + threadIdx.x)*dim],
 				&sh_cords[threadIdx.x*dim]
 			);
+		
+			//values[blockDim.x*blockIdx.x + threadIdx.x] =
+			//	sh_values[threadIdx.x];
+			values[blockDim.x*blockIdx.x + threadIdx.x] = 
+				optimization_function(&sh_cords[threadIdx.x*dim], dim);
+
+			if (threadIdx.x < COLONY_POOL)
+			{
+				//Load values into shared memory
+				copy_cords<dim>(
+					&hive_cords[(blockIdx.x*COLONY_POOL + threadIdx.x)*dim],
+					&sh_cords[threadIdx.x*dim]
+				);
+			}
 		}
-		//-----------------------------------------------------------------------//
 	}
 
 	/*
@@ -1075,12 +787,6 @@ namespace gpu{
 		cudaMalloc((void**) &d_cords,      cords_size);
 		cudaMalloc((void**) &d_values,     values_size);
 		cudaMalloc((void**) &d_hive_cords, hive_cords_size);
-
-		//! ova go ostaviv za da mozhe da proveram razlika
-		//float* d_upper_bounds;
-		//float* d_lower_bounds;
-		//cudaMalloc((void**) &d_upper_bounds, bounds_size);
-		//cudaMalloc((void**) &d_lower_bounds, bounds_size);
 
 		cudaMemcpy(d_cords,  cords, cords_size,   cudaMemcpyHostToDevice);
 		cudaMemcpy(d_values, values, values_size, cudaMemcpyHostToDevice);
