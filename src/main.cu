@@ -26,38 +26,20 @@ using namespace abc_shared;
 
 int main()
 {
-	//float lower_bounds[] = {-10, -10};
-	//float upper_bounds[] = { 10,  10};
-	float lower_bounds[] = {-500, -500};
-	float upper_bounds[] = { 500,  500};
-
-
-	for(int i = 0; i < TestFunc::INVALID; i++)
+	for(int i = TestFunc::SCHWEFEL; i < TestFunc::INVALID; i++)
 	{
-		RouletteWheelGpuTest roulette_test = RouletteWheelGpuTest<
-			2, 100
-		>();
-		roulette_test.for_all_combinations(
-			(TestFunc) i,
-			lower_bounds,
-			upper_bounds
+		//RouletteWheelGpuTest test = RouletteWheelGpuTest<2, 100>();
+		//RankGpuTest test = RankGpuTest<2, 100>();
+		//RankCpuTest test = RankCpuTest<2, 10000>();
+		//RouletteCpuTest test = RouletteCpuTest<2, 10000>();
+		//TournamentCpuTestSingle test = TournamentCpuTestSingle<2, 10000>();
+		//TournamentCpuTestMultiple test = TournamentCpuTestMultiple<2, 10000>();
+		//TournamentGpuTestSingle test = TournamentGpuTestSingle<2, 10000>();
+		TournamentGpuTestMultiple test = TournamentGpuTestMultiple<2, 10000>();
+		test.for_all_combinations(
+			(TestFunc) i
 		);
 	}
-
-	//RankGpuTest rank_test = RankGpuTest<2>();
-	//rank_test.for_all_combinations(problems::gpu::rosenbrock, lower_bounds, upper_bounds);
-	//TournamentGpuTestSingle tourn_single_test = TournamentGpuTestSingle<2>();
-	//tourn_single_test.for_all_combinations(problems::gpu::rosenbrock, lower_bounds, upper_bounds);
-	//TournamentGpuTestMultiple tourn_multiple_test = TournamentGpuTestMultiple<2>();
-	//tourn_multiple_test.for_all_combinations(problems::gpu::rosenbrock, lower_bounds, upper_bounds);
-	//RouletteCpuTest roulette_test = RouletteCpuTest<2>();
-	//roulette_test.for_all_combinations(problems::cpu::rosenbrock, lower_bounds, upper_bounds);
-	//RankCpuTest rank_test = RankCpuTest<2>();
-	//rank_test.for_all_combinations(problems::cpu::rosenbrock, lower_bounds, upper_bounds);
-	//TournamentCpuTestSingle tourn_single_test = TournamentCpuTestSingle<2>();
-	//tourn_single_test.for_all_combinations(problems::gpu::rosenbrock, lower_bounds, upper_bounds);
-	//TournamentCpuTestMultiple tourn_multiple_test = TournamentCpuTestMultiple<2>();
-	//tourn_multiple_test.for_all_combinations(problems::gpu::rosenbrock, lower_bounds, upper_bounds);
 
 	return 0;
 }

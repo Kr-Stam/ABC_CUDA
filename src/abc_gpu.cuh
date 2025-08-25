@@ -66,43 +66,71 @@ namespace gpu{
 
 	template<
 		uint32_t dim,
-		int      num_of_bees
+		uint32_t num_of_bees
 	>
 	__device__ void sort_bees(
 		float* sh_values,
 		float* sh_cords
 	)
 	{
-		int tid = blockIdx.x * blockDim.x + threadIdx.x;
+		int tid = threadIdx.x;
+
 		//problemot so ova e shto dodatno treba i da go smenam redosledot na
 		//koordinatite
 
-		for(int size = 2; size < num_of_bees; size <<= 2)
+		for(uint32_t size = 2; size < num_of_bees; size <<= 1)
 		{
-			for(int stride = size >> 1; stride > 0; stride >>= 1) 
+			for(uint32_t stride = size >> 1; stride > 0; stride >>= 1) 
 			{
-				int pos = (tid << 1) - (tid && (stride - 1));
-				if(pos + stride < num_of_bees)
+				if (stride < 32)
 				{
-					bool ascending = (tid & (size >> 1)) == 0;
-					float a = sh_values[tid];
-					float b = sh_values[tid + stride];
-
-					if((a > b) == ascending)
+					// better memory access pattern
+					uint32_t partner = tid ^ stride;
+					if(partner < num_of_bees)
 					{
-						sh_values[tid]        = b;
-						sh_values[tid+stride] = a;
+						bool ascending = (tid & (size >> 1)) == 0;
+						float a = sh_values[tid];
+						float b = sh_values[partner];
 
+						if((a > b) == ascending)
+						{
+							sh_values[tid]     = b;
+							sh_values[partner] = a;
+
+							#pragma unroll
+							for(int i = 0; i < dim; i++)
+							{
+								float tmp = sh_cords[tid*dim+i];
+								sh_cords[tid*dim+i] = sh_cords[(tid+stride)*dim+i];
+								sh_cords[partner*dim+i] = tmp;
+							}
+						}
+					}
+					__syncthreads();
+				}
+				else
+				{
+					// Warp-level path
+					uint32_t lane = tid & 31;
+					bool ascending = (tid & (size >> 1)) == 0;
+
+					float current = sh_values[tid];
+					// Exchange values within warp using shuffle
+					float other = __shfl_xor_sync(0xffffffffu, current, stride);
+
+					if(current > other && ascending && (lane & stride) == 0)
+					{
+						uint32_t partner = tid ^ stride;
 						#pragma unroll
 						for(int i = 0; i < dim; i++)
 						{
-							float tmp = sh_cords[tid*dim+i];
-							sh_cords[tid*dim+i] = sh_cords[(tid+stride)*dim+i];
-							sh_cords[(tid+stride)*dim+i] = tmp;
+							float tmp = sh_cords[tid*dim + i];
+							sh_cords[tid*dim + i] = sh_cords[partner*dim + i];
+							sh_cords[partner*dim + i] = tmp;
 						}
 					}
+					__syncwarp();
 				}
-				__syncthreads();
 			}
 
 		}
@@ -249,14 +277,15 @@ namespace gpu{
 		Tourn      tournament_type,
 		uint32_t   tournament_size,
 		uint32_t   tournament_num,
-		bool       shmem_enabled
+		int        sync_barrier
 	>
 	__global__ void abc(
-		float*   cords,
-		float*   values,
-		float*   hive_cords,
-		int      trials_limit, 
-		opt_func optimization_function
+		float*       cords,
+		float*       values,
+		float*       hive_cords,
+		int          trials_limit, 
+		opt_func     optimization_function,
+		curandState* states
 	)
 	{
 		//-------------------------VARIABLE-DECLARATION----------------------//
@@ -300,11 +329,6 @@ namespace gpu{
 			sh_values[threadIdx.x] = optimization_function(
 				&sh_cords[threadIdx.x*dim],
 				dim
-			);
-
-			curand_init(
-				clock64() + blockDim.x*blockIdx.x + threadIdx.x,
-				0, 0, &state
 			);
 		}
 		__syncthreads();
@@ -630,7 +654,8 @@ namespace gpu{
 					}
 				}
 
-				//! radi sinhronizacija
+				// coordinates are moved to a local variable to prevent a
+				// race condition
 				copy_cords<dim>(
 					 tmp_cords,
 					&sh_cords[choice*dim]
@@ -642,9 +667,6 @@ namespace gpu{
 					if(tmp_cords[i] < c_lower_bounds[i])
 						tmp_cords[i] = c_lower_bounds[i];
 				}
-				//! specifichno tuka pravi nekoj problem optimizacijata
-				//tmp_value = sh_values[choice];
-				//tmp_value = optimization_function(&sh_cords[choice*dim], dim);
 				tmp_value = optimization_function(tmp_cords, dim);
 
 				if(sh_values[threadIdx.x] > tmp_value)
@@ -669,12 +691,16 @@ namespace gpu{
 				#pragma unroll
 				for(int i = 0; i < dim; i++)
 				{
-					sh_cords[threadIdx.x*dim+i] = curand_uniform(&state) *
+					float tmp_cord = curand_uniform(&state) *
 						(c_upper_bounds[i] - c_lower_bounds[i]);
-					if(sh_cords[threadIdx.x*dim+i] > c_upper_bounds[i])
-						sh_cords[threadIdx.x*dim+i] = c_upper_bounds[i];
-					if(sh_cords[threadIdx.x*dim+i] < c_lower_bounds[i])
-						sh_cords[threadIdx.x*dim+i] = c_lower_bounds[i];
+					
+					// this check is necessary because of floating point errors
+					if(tmp_cord > c_upper_bounds[i])
+						tmp_cord = c_upper_bounds[i];
+					if(tmp_cord < c_lower_bounds[i])
+						tmp_cord = c_lower_bounds[i];
+
+					sh_cords[threadIdx.x*dim+i] = tmp_cord;
 				}
 
 				sh_values[threadIdx.x] = optimization_function(
@@ -682,6 +708,11 @@ namespace gpu{
 					dim
 				);
 				trials = 0;
+				
+				// a synchronization barrier was deemed to be unnecessary
+				// since employed bee optimization would not be adversely
+				// affected with a partially correct state, this has proven
+				// to be a valid assumption in the experimental results
 			}
 		}
 
@@ -725,6 +756,14 @@ namespace gpu{
 	__device__ opt_func d_schwefel       = problems::gpu::schwefel;
 	
 	#define COLONY_POOL 4
+
+	__global__ void init_curand_states(curandState* states)
+	{
+		curand_init(
+			clock64() + blockDim.x*blockIdx.x + threadIdx.x,
+			0, 0, &states[blockDim.x*blockIdx.x + threadIdx.x]
+		);
+	}
 
 	/*
 	 * @brief Function used to launch the GPU version of the ABC algorithm
@@ -893,6 +932,11 @@ namespace gpu{
 			           block_size*sizeof(float) + //sh_max
 			           block_size*sizeof(float);  //sh_roulette
 
+		// Init curand states
+		curandState* d_states;
+		cudaMalloc((void**) &d_states, grid_size*block_size*sizeof(curandState));
+		init_curand_states<<<grid_size, block_size>>>(d_states);
+
 		cudaDeviceSynchronize();
 
 		Timer timer = Timer();
@@ -909,13 +953,14 @@ namespace gpu{
 			tournament_type,
 			tournament_size,
 			tournament_num,
-			true
+			2
 		><<<grid_size, block_size, SHMEM_SIZE>>>(
 			d_cords,
 			d_values,
 			d_hive_cords,
 			trials_limit,
-			d_symbol
+			d_symbol,
+			d_states
 		);
 		(*duration) = timer.stop();
 

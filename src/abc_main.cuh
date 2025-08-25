@@ -5,6 +5,7 @@
 namespace abc_shared
 {
 	#include "utils/array.hpp" 
+	#include "problems/problems.h"
 	#define STR_SIZE 20
 
 	///@brief Choice of selection type
@@ -60,20 +61,20 @@ namespace abc_shared
 	};
 
 	///@brief Choice of roulette type
-	enum RouletteCpu {
-		FULL         = 0,
+	enum SortingCpu {
+		FULL_SORT    = 0,
 		PARTIAL_SORT = 1,
 		NONE         = 2
 	};
 
-	constexpr std::array<char, STR_SIZE> RouletteCpuToString(
-		RouletteCpu roulette_sorting
+	constexpr std::array<char, STR_SIZE> SortingCpuToString(
+		SortingCpu sorting_type
 	)
 	{
-		switch(roulette_sorting)
+		switch(sorting_type)
 		{
-		case FULL:
-			return utils::arr::str_to_arr<STR_SIZE>("full");
+		case FULL_SORT:
+			return utils::arr::str_to_arr<STR_SIZE>("full_sort");
 		case PARTIAL_SORT:
 			return utils::arr::str_to_arr<STR_SIZE>("partial_sort");
 		case NONE:
@@ -284,5 +285,24 @@ namespace abc_shared
 			return { };
 		}
 		return { };
+	}
+
+	constexpr opt_func GetCpuTestFunctionPtr(
+		TestFunc test_function
+	)
+	{
+		switch(test_function)
+		{
+		case ROSENBROCK:    return problems::cpu::rosenbrock;
+		case CROSS_IN_TRAY: return problems::cpu::cross_in_tray;
+		case SCHAFFER_2:    return problems::cpu::schaffer2;
+		case SCHAFFER_4:    return problems::cpu::schaffer4;
+		case BOHACHEVSKY_1: return problems::cpu::bohachevsky1;
+		case BOHACHEVSKY_2: return problems::cpu::bohachevsky2;
+		case BOHACHEVSKY_3: return problems::cpu::bohachevsky3;
+		case  SCHWEFEL:     return problems::cpu::schwefel;
+		case INVALID:       return NULL;
+		}
+		return NULL;
 	}
 }

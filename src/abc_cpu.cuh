@@ -428,17 +428,17 @@ namespace cpu
 	 * @return void
 	 */
 	template<
-		uint32_t    dimensions,
-		uint32_t    bees_count,
-		uint32_t    scouts_count,
-		uint32_t    trials_limit, 
-		Selection   selection_type,
-		Roulette    roulette_type,
-		RouletteCpu roulette_sorting,
-		Rank        rank_type,
-		Tourn       tournament_type,
-		uint32_t    tournament_size,
-		uint32_t    tournament_num
+		uint32_t   dimensions,
+		uint32_t   bees_count,
+		uint32_t   scouts_count,
+		uint32_t   trials_limit, 
+		Selection  selection_type,
+		Roulette   roulette_type,
+		SortingCpu sorting,
+		Rank       rank_type,
+		Tourn      tournament_type,
+		uint32_t   tournament_size,
+		uint32_t   tournament_num
 	>
 	void abc(
 		std::vector<Bee>* bees,
@@ -486,7 +486,8 @@ namespace cpu
 			
 			if constexpr (selection_type == ROULETTE_WHEEL)
 			{
-				if constexpr (roulette_sorting == PARTIAL_SORT)
+				// Execute roulette wheel selection on the best n candidates
+				if constexpr (sorting == PARTIAL_SORT)
 				{
 					std::partial_sort(
 						(*bees).begin(),
@@ -502,7 +503,7 @@ namespace cpu
 						roulette
 					);
 				}
-				else
+				else if constexpr (sorting == FULL_SORT)
 				{
 					create_roulette_wheel<
 						roulette_size,
@@ -515,11 +516,24 @@ namespace cpu
 			}
 			else if constexpr (selection_type == RANK)
 			{
-				std::sort(
-					(*bees).begin(),
-					(*bees).end(),
-					BeeCompare
-				);
+				// Execute roulette wheel selection on the best n candidates
+				if constexpr (sorting == PARTIAL_SORT)
+				{
+					std::partial_sort(
+						(*bees).begin(),
+						(*bees).begin() + scouts_count,
+						(*bees).end(),
+						BeeCompare
+					);
+				}
+				else if constexpr (sorting == FULL_SORT)
+				{
+					std::sort(
+						(*bees).begin(),
+						(*bees).end(),
+						BeeCompare
+					);
+				}
 			}
 
 
@@ -542,16 +556,18 @@ namespace cpu
 					if constexpr (rank_type < CONSTANT_LINEAR)
 						choice = rank_selection_arr<rank_arr_size>(rank_arr, rand);
 					else if constexpr (rank_type == CONSTANT_LINEAR)
-						choice = rank_const::lin<rank_arr_size>(rand);
+						choice = rank_const::lin<scouts_count>(rand);
 					else if constexpr (rank_type == CONSTANT_EXPONENTIAL)
-						choice = rank_const::exp<rank_arr_size, 1, 20>(rand);
+						choice = rank_const::exp<scouts_count, 1, 20>(rand);
 					else if constexpr (rank_type == CONSTANT_EXPONENTIAL_2)
-						choice = rank_const::exp2<rank_arr_size, 1, 20>(rand);
+						choice = rank_const::exp2<scouts_count, 1, 20>(rand);
 				}
 				else if constexpr (selection_type == TOURNAMENT)
 				{
 					if constexpr (tournament_type == SINGLE)
-						choice = tournament_selection_single<tournament_size>(bees);
+						choice = tournament_selection_single<tournament_size>(
+							bees
+						);
 					else if constexpr (tournament_type == MULTIPLE)
 						choice = tournament_selection_multiple<tournament_size, tournament_num>(bees);
 				}
